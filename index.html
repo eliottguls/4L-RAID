@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Manuel 3D 4L GTL</title>
+  <meta name="description" content="Manuel d’atelier interactif en 3D de la Renault 4 GTL Clan 1989, d’après la Revue Technique Automobile.">
+  <meta name="theme-color" content="#16130f">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three/three.module.min.js",
+        "three/addons/": "./vendor/three/addons/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <button class="icon-btn only-mobile" id="menu-btn" aria-label="Ouvrir le menu" title="Menu">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+    <a class="brand" href="#" id="home-link">
+      <span class="brand-mark">4L</span>
+      <span class="brand-text"><strong>Manuel 3D</strong><small>GTL Clan · 1989</small></span>
+    </a>
+    <form class="search" id="search-form" role="search" autocomplete="off">
+      <label class="visually-hidden" for="search">Rechercher une pièce ou une intervention</label>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+      <input id="search" type="search" placeholder="Comment changer les plaquettes ?" enterkeyhint="search">
+      <kbd class="only-desktop">/</kbd>
+    </form>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar" id="sidebar" aria-label="Navigation">
+      <nav class="tabs" role="tablist">
+        <button role="tab" aria-selected="true" data-tab="search">Chercher</button>
+        <button role="tab" aria-selected="false" data-tab="parts">Pièces</button>
+        <button role="tab" aria-selected="false" data-tab="maintenance">Entretien</button>
+        <button role="tab" aria-selected="false" data-tab="rta">Ma RTA</button>
+      </nav>
+      <section class="tab-panel" data-panel="search" id="panel-search"></section>
+      <section class="tab-panel" data-panel="parts" id="panel-parts" hidden></section>
+      <section class="tab-panel" data-panel="maintenance" id="panel-maintenance" hidden></section>
+      <section class="tab-panel" data-panel="rta" id="panel-rta" hidden></section>
+    </aside>
+
+    <section class="viewer" id="viewer" aria-label="Vue 3D">
+      <div class="loading" id="loading">Chargement du modèle 3D…</div>
+      <div class="tooltip" id="tooltip" hidden></div>
+      <div class="hud">
+        <button class="tool" id="xray-btn" aria-pressed="false" title="Voir à travers la carrosserie (X)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.5"/></svg>
+          <span>Rayons X</span>
+        </button>
+        <label class="tool slider" title="Vue éclatée (E)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v5M12 16v5M3 12h5M16 12h5"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+          <span>Éclaté</span>
+          <input type="range" id="explode" min="0" max="1" step="0.01" value="0" aria-label="Vue éclatée">
+        </label>
+        <button class="tool" id="reset-btn" title="Recentrer la vue (R)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4"/></svg>
+          <span>Recentrer</span>
+        </button>
+        <label class="tool color" title="Couleur de la carrosserie">
+          <input type="color" id="body-color" value="#e9e6dc" aria-label="Couleur de la carrosserie">
+        </label>
+      </div>
+      <div class="systems" id="systems" aria-label="Afficher ou masquer des systèmes"></div>
+      <p class="hint" id="hint">Clique sur une pièce · glisse pour tourner · molette ou pincer pour zoomer</p>
+    </section>
+
+    <aside class="detail" id="detail" hidden aria-live="polite"></aside>
+  </main>
+
+  <dialog class="rta-dialog" id="rta-dialog">
+    <header>
+      <strong id="rta-title">Revue technique</strong>
+      <div class="rta-nav">
+        <button class="icon-btn" id="rta-prev" aria-label="Page précédente" title="Page précédente">‹</button>
+        <span id="rta-page">–</span>
+        <button class="icon-btn" id="rta-next" aria-label="Page suivante" title="Page suivante">›</button>
+        <button class="icon-btn" id="rta-close" aria-label="Fermer" title="Fermer (Échap)">✕</button>
+      </div>
+    </header>
+    <div class="rta-canvas-wrap"><canvas id="rta-canvas"></canvas></div>
+  </dialog>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
