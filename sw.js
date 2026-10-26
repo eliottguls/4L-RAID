@@ -1,9 +1,10 @@
 // Cache hors-ligne : une fois le site ouvert avec du réseau, il marche sans (pratique en plein désert).
-const VERSION = 'manuel-4l-v1';
+const VERSION = 'manuel-4l-v2';
 const ASSETS = [
   './', 'index.html', 'css/style.css',
   'js/app.js', 'js/car.js', 'js/data.js', 'js/rta.js',
   'vendor/three/three.module.min.js', 'vendor/three/addons/controls/OrbitControls.js',
+  'vendor/three/addons/environments/RoomEnvironment.js',
   'vendor/pdfjs/pdf.min.mjs', 'vendor/pdfjs/pdf.worker.min.mjs',
 ];
 

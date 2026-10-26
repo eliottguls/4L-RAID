@@ -270,3 +270,20 @@ details ul { margin: 6px 0 4px; padding-left: 18px; font-size: 14px; }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* ---------- Vis et fixations ---------- */
+.bolt-chips { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.bolt-chip { display: inline-flex; align-items: flex-start; gap: 6px; font-size: 13px; color: #9fe6ff; }
+.bolt-chip svg { width: 16px; height: 16px; margin-top: 1px; }
+.bolt-chip b { font-weight: 600; }
+.fx-list { list-style: none; margin: 0 0 8px; padding: 0; }
+.fx-item {
+  width: 100%; display: grid; grid-template-columns: 20px 1fr; gap: 10px; text-align: left;
+  background: none; border: 1px solid transparent; border-radius: 8px; padding: 8px; margin: 0 -8px; cursor: pointer; font-size: 14px;
+}
+.fx-item:hover { background: var(--panel-2); }
+.fx-item.on { border-color: #2fd3ff; background: rgba(47, 211, 255, 0.07); }
+.fx-item svg { color: #9fe6ff; }
+.fx-item span { display: flex; flex-direction: column; gap: 2px; }
+.fx-item .mono { font-family: var(--font-mono); font-size: 12.5px; color: var(--text); }
+.fx-item .muted { font-size: 13px; }

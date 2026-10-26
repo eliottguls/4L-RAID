@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { buildCar, setBodyColor } from './car.js';
-import { VEHICLE, SYSTEMS, PARTS, PROCEDURES, MAINTENANCE } from './data.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { VEHICLE, SYSTEMS, PARTS, PROCEDURES, MAINTENANCE, FASTENERS } from './data.js';
 import { restoreRta, loadRtaFile, forgetRta, hasRta, showPage, initRtaDialog } from './rta.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -45,8 +46,11 @@ controls.minDistance = 0.4;
 controls.maxDistance = 14;
 controls.maxPolarAngle = Math.PI * 0.495;
 
-scene.add(new THREE.HemisphereLight(0xfff4e0, 0x2a2018, 0.9));
-const sun = new THREE.DirectionalLight(0xfff1dc, 2.1);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+scene.add(new THREE.HemisphereLight(0xfff4e0, 0x2a2018, 0.45));
+const sun = new THREE.DirectionalLight(0xfff1dc, 1.8);
 sun.position.set(4, 7, 3);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
@@ -64,7 +68,7 @@ const grid = new THREE.PolarGridHelper(8, 16, 12, 64, 0x3d342b, 0x332b24);
 grid.position.y = 0.002;
 scene.add(grid);
 
-const { root: car, parts } = buildCar();
+const { root: car, parts, fasteners } = buildCar();
 scene.add(car);
 $('#loading').remove();
 
@@ -100,18 +104,33 @@ const state = {
   hovered: null,
 };
 
+let previewFx = null; // jeu de vis montré depuis une fiche pièce
+let pendingFx = null;
 // Calcule les cibles (position, opacité, surbrillance) de chaque pièce.
 function applyVisualState() {
   const proc = state.proc;
   const removed = new Set();
   const focus = new Set();
+  const unscrewed = new Set();
+  const boltFocus = new Set();
+  let sequence = null;
   if (proc) {
-    proc.steps.forEach((s, i) => { if (i <= state.step) (s.remove || []).forEach((id) => removed.add(id)); });
+    proc.steps.forEach((s, i) => {
+      if (i > state.step) return;
+      (s.remove || []).forEach((id) => removed.add(id));
+      (s.refit || []).forEach((id) => removed.delete(id));
+      (s.unscrew || []).forEach((id) => unscrewed.add(id));
+      (s.screw || []).forEach((id) => unscrewed.delete(id));
+    });
     const cur = proc.steps[state.step];
-    if (cur) [...(cur.focus || []), ...(cur.remove || [])].forEach((id) => focus.add(id));
-    else proc.parts.forEach((id) => focus.add(id));
+    if (cur) {
+      [...(cur.focus || []), ...(cur.remove || []), ...(cur.refit || [])].forEach((id) => focus.add(id));
+      [...(cur.unscrew || []), ...(cur.screw || []), ...(cur.bolts || [])].forEach((id) => boltFocus.add(id));
+      sequence = cur.sequence || null;
+    } else proc.parts.forEach((id) => focus.add(id));
   } else if (state.selected) {
     focus.add(state.selected);
+    if (previewFx) { unscrewed.add(previewFx); boltFocus.add(previewFx); sequence = fasteners.get(previewFx)?.order ? previewFx : null; }
   }
 
   for (const g of allGroups) {
@@ -138,10 +157,39 @@ function applyVisualState() {
     const highlight = focus.has(id);
     g.traverse((o) => {
       if (!o.isMesh) return;
-      o.userData.targetOpacity = Math.min(opacity, o.userData.baseOpacity);
-      o.userData.highlight = highlight;
+      const bolt = o.userData.fastener && boltFocus.has(o.userData.fastener);
+      o.userData.targetOpacity = Math.min(bolt ? 1 : opacity, o.userData.baseOpacity);
+      o.userData.highlight = bolt ? 'bolt' : highlight;
     });
   }
+  for (const [id, list] of fasteners) for (const f of list) f.target = unscrewed.has(id) ? 1 : 0;
+  state.sequence = sequence;
+  if (sequence) sequenceSprites(sequence);
+  state.boltFocus = boltFocus;
+}
+
+// Numéros d'ordre de serrage affichés au-dessus des vis.
+const seqSprites = new Map();
+function sequenceSprites(setId) {
+  if (seqSprites.has(setId)) return seqSprites.get(setId);
+  const list = fasteners.get(setId) || [];
+  const order = list.order || list.map((_, i) => i + 1);
+  const sprites = list.map((f, i) => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const g = c.getContext('2d');
+    g.fillStyle = '#f28c28'; g.beginPath(); g.arc(32, 32, 28, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#1b1209'; g.font = 'bold 34px Barlow, Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(String(order[i]), 32, 34);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false }));
+    sp.scale.setScalar(0.035);
+    sp.renderOrder = 10;
+    sp.visible = false;
+    scene.add(sp);
+    return { sp, f };
+  });
+  seqSprites.set(setId, sprites);
+  return sprites;
 }
 
 // ===================== Caméra =====================
@@ -151,7 +199,10 @@ function tweenCamera(pos, target, duration = 0.9) {
   camTween = { fromPos: camera.position.clone(), fromTarget: controls.target.clone(), pos, target, t: 0, duration };
 }
 
-function focusOn(ids) {
+// Appelé avant openDetail : on attend que le panneau (et le décalage de vue) soit en place.
+function focusOn(ids) { queueMicrotask(() => focusNow(ids)); }
+
+function focusNow(ids) {
   const box = new THREE.Box3();
   let any = false;
   for (const id of ids) {
@@ -167,7 +218,11 @@ function focusOn(ids) {
   if (!any) return;
   const center = box.getCenter(new THREE.Vector3());
   const size = box.getSize(new THREE.Vector3()).length();
-  const dist = THREE.MathUtils.clamp(size * 1.7 + 0.8, 1.5, 7.5);
+  // En portrait (mobile), le champ horizontal est étroit, et le panneau du bas
+  // réduit le champ vertical (setViewOffset) : on recule d'autant.
+  const narrow = Math.max(1, 1 / Math.max(camera.aspect, 0.35)) ** 0.6;
+  const sheet = camera.view?.enabled ? camera.view.fullHeight / camera.view.height : 1;
+  const dist = THREE.MathUtils.clamp((size * 1.7 + 0.8) * narrow * sheet, 1.5, 10);
   const dir = camera.position.clone().sub(controls.target).normalize();
   if (dir.y < 0.15) dir.y = 0.35;
   dir.normalize();
@@ -189,15 +244,21 @@ function pick(ev) {
   raycaster.setFromCamera(pointer, camera);
   const candidates = allMeshes.filter((m) => m.userData.group.visible && m.material.opacity > 0.3);
   const hit = raycaster.intersectObjects(candidates, false)[0];
+  hoveredFastener = hit?.object.userData.fastener || null;
   return hit ? hit.object.userData.group.userData.partId : null;
 }
+let hoveredFastener = null;
 
 let down = null;
 renderer.domElement.addEventListener('pointerdown', (e) => { down = { x: e.clientX, y: e.clientY }; closeSidebarMobile(); });
 renderer.domElement.addEventListener('pointerup', (e) => {
   if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) return;
   const id = pick(e);
-  if (id) navigate(`#/piece/${id}`);
+  const fx = hoveredFastener;
+  if (id) {
+    pendingFx = !state.proc && fx && FASTENERS[fx]?.part === id ? fx : null;
+    if (location.hash === `#/piece/${id}`) showPart(id, false); else navigate(`#/piece/${id}`);
+  }
   else if (state.selected && !state.proc) navigate('#/');
 });
 renderer.domElement.addEventListener('pointermove', (e) => {
@@ -207,7 +268,8 @@ renderer.domElement.addEventListener('pointermove', (e) => {
   renderer.domElement.style.cursor = id ? 'pointer' : 'grab';
   if (id) {
     tooltip.hidden = false;
-    tooltip.textContent = PARTS[id]?.name || id;
+    const fx = hoveredFastener && FASTENERS[hoveredFastener];
+    tooltip.textContent = fx ? `${fx.name} · ${PARTS[id]?.name || id}` : PARTS[id]?.name || id;
     const r = viewer.getBoundingClientRect();
     tooltip.style.transform = `translate(${e.clientX - r.left + 14}px, ${e.clientY - r.top + 12}px)`;
   } else tooltip.hidden = true;
@@ -216,6 +278,10 @@ renderer.domElement.addEventListener('pointerleave', () => { tooltip.hidden = tr
 
 // ===================== Boucle de rendu =====================
 const ORANGE = new THREE.Color(0xf28c28);
+const CYAN = new THREE.Color(0x2fd3ff);
+const SPIN = new THREE.Quaternion();
+const Y_AXIS = new THREE.Vector3(0, 1, 0);
+const tmpV = new THREE.Vector3();
 const clock = new THREE.Clock();
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05);
@@ -233,9 +299,23 @@ function frame() {
     if (mat.transparent !== transparent) { mat.transparent = transparent; mat.needsUpdate = true; }
     mat.depthWrite = !m.userData.glass && mat.opacity > 0.6;
     const hovered = m.userData.group.userData.partId === state.hovered;
-    if (m.userData.highlight) mat.emissive.copy(ORANGE).multiplyScalar(pulse);
+    if (m.userData.highlight === 'bolt') mat.emissive.copy(CYAN).multiplyScalar(pulse * 2);
+    else if (m.userData.highlight) mat.emissive.copy(ORANGE).multiplyScalar(pulse);
     else if (hovered) mat.emissive.copy(ORANGE).multiplyScalar(0.18);
     else mat.emissive.setHex(m.userData.baseEmissive);
+  }
+  const kb = reduceMotion ? 1 : 1 - Math.exp(-dt * 3);
+  for (const list of fasteners.values()) for (const f of list) {
+    const p = (f.p ?? 0) + ((f.target ?? 0) - (f.p ?? 0)) * kb;
+    if (Math.abs(p - (f.p ?? 0)) < 1e-5 && f.p !== undefined) continue;
+    f.p = p;
+    f.obj.position.copy(f.base).addScaledVector(f.dir, f.travel * p);
+    f.obj.quaternion.copy(f.q0);
+    if (f.spin) f.obj.quaternion.multiply(SPIN.setFromAxisAngle(Y_AXIS, p * Math.PI * 6));
+  }
+  for (const [id, sprites] of seqSprites) for (const { sp, f } of sprites) {
+    sp.visible = state.sequence === id && f.obj.parent.visible;
+    if (sp.visible) sp.position.copy(f.obj.getWorldPosition(tmpV)).add(Y_AXIS.clone().multiplyScalar(0.035));
   }
   if (camTween) {
     camTween.t = Math.min(1, camTween.t + dt / camTween.duration);
@@ -419,6 +499,30 @@ function renderRtaPanel() {
   $('#rta-forget')?.addEventListener('click', async () => { await forgetRta(); rtaInfo = { loaded: false }; renderRtaPanel(); });
 }
 
+const BOLT_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8l4 4-4 4H8L4 7z"/><path d="M10 11v10M14 11v10M10 15h4M10 18h4"/></svg>';
+function fastenerLabel(id) {
+  const f = FASTENERS[id];
+  if (!f) return '';
+  const n = f.count ? `${f.count} × ` : '';
+  return `${n}${f.name}${f.torque ? ` · ${f.torque}` : ''}`;
+}
+function fastenerChips(step) {
+  const ids = [...(step.unscrew || []), ...(step.screw || []), ...(step.bolts || [])];
+  if (!ids.length) return '';
+  return `<span class="bolt-chips">${[...new Set(ids)].map((id) => {
+    const verb = step.unscrew?.includes(id) ? 'Dévisser' : step.screw?.includes(id) ? 'Serrer' : 'Repérer';
+    return `<span class="bolt-chip">${BOLT_ICON}<span><b>${verb}</b> ${esc(fastenerLabel(id))}</span></span>`;
+  }).join('')}</span>`;
+}
+function partFasteners(partId) {
+  const ids = Object.keys(FASTENERS).filter((id) => FASTENERS[id].part === partId);
+  if (!ids.length) return '';
+  return `<h3 class="group-title">Vis et fixations</h3><ul class="fx-list">${ids.map((id) => {
+    const f = FASTENERS[id];
+    return `<li><button class="fx-item${previewFx === id ? ' on' : ''}" data-fx="${id}">${BOLT_ICON}<span><b>${esc((f.count ? `${f.count} × ` : '') + f.name)}</b>${f.torque ? `<span class="mono">${esc(f.torque)}</span>` : ''}${f.note ? `<span class="muted">${esc(f.note)}</span>` : ''}</span></button></li>`;
+  }).join('')}</ul>`;
+}
+
 function pageButtons(pages, title) {
   if (!pages?.length) return '';
   return `<div class="pages"><span class="muted">Revue technique :</span>${pages.map((n) =>
@@ -442,6 +546,8 @@ function closeDetail() {
 function showPart(id, moveCamera = true) {
   const p = PARTS[id];
   if (!p) return;
+  previewFx = pendingFx || (state.selected === id ? previewFx : null);
+  pendingFx = null;
   state.proc = null; state.step = -1; state.selected = id;
   applyVisualState();
   if (moveCamera) focusOn([id]);
@@ -456,6 +562,7 @@ function showPart(id, moveCamera = true) {
     <p>${esc(p.desc)}</p>
     ${p.specs.length ? `<table class="specs">${p.specs.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join('')}</table>` : ''}
     ${procs.length ? `<h3 class="group-title">Interventions</h3><ul class="list">${procs.map((pid) => procItem(procById(pid))).join('')}</ul>` : ''}
+    ${partFasteners(id)}
     ${pageButtons(p.pages, p.name)}`);
 }
 
@@ -490,7 +597,7 @@ function showProcedure(id, step = -1, moveCamera = true) {
     ${p.torques.length ? `<table class="specs">${p.torques.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join('')}</table>` : ''}
     <ol class="steps">${p.steps.map((s, i) => `
       <li class="${i === state.step ? 'active' : ''} ${i < state.step ? 'done' : ''}">
-        <button data-step="${i}"><span class="num">${i + 1}</span><span>${esc(s.t)}</span></button>
+        <button data-step="${i}"><span class="num">${i + 1}</span><span>${esc(s.t)}${fastenerChips(s)}</span></button>
       </li>`).join('')}</ol>
     ${pageButtons(p.pages, p.title)}
     <div class="step-bar">
@@ -536,6 +643,14 @@ document.addEventListener('click', async (e) => {
     const n = parseInt(t.dataset.step, 10);
     history.replaceState(null, '', `#/proc/${state.proc.id}/${n}`);
     showProcedure(state.proc.id, n);
+    return;
+  }
+  if (t.dataset.fx) {
+    const id = t.dataset.fx;
+    const on = previewFx === id ? null : id;
+    previewFx = on;
+    detail.querySelectorAll('[data-fx]').forEach((b) => b.classList.toggle('on', b.dataset.fx === on));
+    applyVisualState();
     return;
   }
   if (t.dataset.q) { $('#search').value = t.dataset.q; renderSearch(t.dataset.q); return; }
