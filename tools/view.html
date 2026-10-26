@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Aperçu glb</title>
+  <style>html, body { margin: 0; height: 100%; background: #24211e; overflow: hidden; } canvas { display: block; }</style>
+  <script type="importmap">{ "imports": { "three": "../vendor/three/three.module.min.js", "three/addons/": "../vendor/three/addons/" } }</script>
+</head>
+<body>
+<!-- Outil de mise au point : tools/view.html?f=../models/moteur.glb&az=40&el=25&d=1.2&t=0.92,0.5,0
+     az / el : angles de la caméra en degrés, d : distance, t : cible, xray=1 : transparence,
+     explode=1 : vue éclatée, fx=1 : vis dévissées, only=id1,id2 : pièces à afficher. -->
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const q = new URLSearchParams(location.search);
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x24211e);
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 0.5));
+const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(2, 4, 3); scene.add(sun);
+const camera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 0.01, 50);
+const t = (q.get('t') || '0.92,0.5,0').split(',').map(Number);
+const az = THREE.MathUtils.degToRad(+(q.get('az') ?? 40)), el = THREE.MathUtils.degToRad(+(q.get('el') ?? 25)), d = +(q.get('d') ?? 1.4);
+camera.position.set(t[0] + d * Math.cos(el) * Math.cos(az), t[1] + d * Math.sin(el), t[2] + d * Math.cos(el) * Math.sin(az));
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(...t); controls.update();
+const only = q.get('only')?.split(',');
+const files = (q.get('f') || '../models/moteur.glb').split('|');
+let pending = files.length;
+for (const f of files) new GLTFLoader().load(f, (g) => {
+  g.scene.traverse((o) => {
+    const ex = o.userData || {};
+    if (ex.partId && only && !only.includes(ex.partId)) o.visible = false;
+    if (ex.partId && q.get('explode')) o.position.add(new THREE.Vector3(...(ex.explode || [0, 0, 0])));
+    if (ex.fx && q.get('fx')) o.position.add(new THREE.Vector3(...ex.dir).multiplyScalar(ex.travel));
+    if (o.isMesh && q.get('xray') && !o.parent.userData.fx) { o.material = o.material.clone(); o.material.transparent = true; o.material.opacity = 0.25; o.material.depthWrite = false; }
+  });
+  scene.add(g.scene);
+  if (--pending === 0) document.title = 'ready';
+}, undefined, (e) => { document.title = 'error ' + e.message; });
+renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+</script>
+</body>
+</html>

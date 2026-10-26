@@ -5,6 +5,7 @@
 // Les vis, écrous et bouchons sont rangés par jeu (FASTENERS dans data.js) : chaque élément
 // est enfant de sa pièce, et connaît son axe de dévissage.
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const AXLE_F = 1.306;          // essieu avant (porte-à-faux 528 mm)
 const AXLE_R_RIGHT = -1.143;   // empattement droit 2 449 mm
@@ -668,21 +669,24 @@ export function buildCar({ bodyColor = 0xe9e6dc } = {}) {
   coil.add(at(cyl(0.012, 0.02, mat(C.black), 'y', 10), 0.86, 0.81, 0.42));
 
   // Échappement : collecteur 4-en-1 côté gauche, ligne sous la caisse
-  const exh = part('echappement', [0, -0.35, 0]);
+  // Collecteur (remplacé par celui du modèle détaillé quand il est chargé) et ligne d'échappement
   const exM = () => mat(0x4b4845, { metalness: 0.5, roughness: 0.6 });
+  const manifold = part('echappement', [0, -0.35, 0]);
+  manifold.userData.replaceKey = 'collecteur';
   for (let i = 0; i < 4; i++) {
     const x = EX + 0.15 - i * 0.10;
-    exh.add(tube([[x, 0.64, -0.13], [x, 0.62, -0.18], [EX + 0.01, 0.56, -0.20], [EX, 0.50, -0.20]], 0.016, exM(), false, 14));
+    manifold.add(tube([[x, 0.64, -0.13], [x, 0.62, -0.18], [EX + 0.01, 0.56, -0.20], [EX + 0.02, 0.466, -0.16]], 0.016, exM(), false, 14));
   }
-  exh.add(tube([[EX, 0.50, -0.20], [EX - 0.05, 0.38, -0.20], [0.66, 0.27, -0.16], [-0.20, 0.235, -0.05], [-0.90, 0.23, 0.10], [-1.13, 0.235, 0.20]], 0.02, exM(), false, 60));
+  manifold.add(at(rbox(0.30, 0.004, 0.18, 0.002, mat(C.alu, { metalness: 0.6 })), EX, 0.60, -0.23)); // tôle pare-chaleur
+  fasten(manifold, 'ecrous-collecteur', [EX + 0.15, EX + 0.05, EX - 0.05, EX - 0.15].map((x) => ({ p: [x + 0.05, 0.66, -0.14], d: [0, 0, -1] })), { r: 0.007, len: 0.03, kind: 'nut' });
+  const exh = part('echappement', [0, -0.35, 0]);
+  exh.add(tube([[EX + 0.02, 0.466, -0.16], [EX + 0.01, 0.38, -0.18], [0.66, 0.27, -0.16], [-0.20, 0.235, -0.05], [-0.90, 0.23, 0.10], [-1.13, 0.235, 0.20]], 0.02, exM(), false, 60));
   const muffler = lathe([[0, -0.20], [0.07, -0.2], [0.085, -0.17], [0.085, 0.17], [0.07, 0.2], [0, 0.2]], exM(), 18);
   muffler.rotation.z = Math.PI / 2;
   muffler.scale.set(1, 1, 1.35);
   at(muffler, -1.35, 0.235, 0.22);
   exh.add(muffler);
   exh.add(tube([[-1.55, 0.235, 0.24], [-1.80, 0.24, 0.30], [-1.92, 0.25, 0.32]], 0.018, exM(), false, 14));
-  exh.add(at(rbox(0.30, 0.004, 0.18, 0.002, mat(C.alu, { metalness: 0.6 })), EX, 0.60, -0.23)); // tôle pare-chaleur
-  fasten(exh, 'ecrous-collecteur', [EX + 0.15, EX + 0.05, EX - 0.05, EX - 0.15].map((x) => ({ p: [x + 0.05, 0.66, -0.14], d: [0, 0, -1] })), { r: 0.007, len: 0.03, kind: 'nut' });
 
   // Carburateur sur le collecteur, filtre à air rond par-dessus (photo RTA, repère 13)
   const carb = part('carburateur', [0, 0.35, -0.35]);
@@ -997,5 +1001,79 @@ export function buildCar({ bodyColor = 0xe9e6dc } = {}) {
 export function setBodyColor(parts, hex) {
   for (const groups of parts.values()) for (const g of groups) {
     g.traverse((o) => { if (o.isMesh && o.material.userData.paint) o.material.color.set(hex); });
+  }
+}
+
+// Modèles détaillés faits dans Blender (tools/blender). Ils remplacent les pièces procédurales
+// de même id une fois chargés ; si le chargement échoue, le modèle procédural reste affiché.
+// Chaque nœud glTF porte extras.partId (pièce) ou extras.fx (fixation : jeu, sens, course).
+export const MODELS = [
+  {
+    url: 'models/moteur.glb',
+    replaces: ['bloc', 'culasse', 'cache-culbuteurs', 'carter-huile', 'filtre-huile', 'jauge', 'distribution', 'bougies',
+      'allumeur', 'carburateur', 'filtre-air', 'pompe-essence', 'pompe-eau', 'embrayage', 'collecteur'],
+  },
+  {
+    url: 'models/trains.glb',
+    replaces: ['boite', 'transmissions', 'triangles-av', 'porte-fusee', 'barres-torsion-av', 'amortisseurs-av', 'direction',
+      'bras-ar', 'barres-torsion-ar', 'amortisseurs-ar', 'disques-av', 'etriers-av', 'tambours-ar'],
+  },
+];
+
+export async function loadModels({ root, parts, fasteners }, models = MODELS) {
+  const loader = new GLTFLoader();
+  for (const { url, replaces } of models) {
+    const gltf = await loader.loadAsync(url);
+    // 1. retire les pièces procédurales remplacées (et leurs fixations)
+    const drop = new Set(replaces);
+    for (const [id, groups] of parts) {
+      const keep = groups.filter((g) => g.userData.model || (!(drop.has(id) && !g.userData.replaceKey) && !drop.has(g.userData.replaceKey)));
+      for (const g of groups) if (!keep.includes(g)) root.remove(g);
+      if (keep.length) parts.set(id, keep); else parts.delete(id);
+    }
+    for (const [setId, list] of fasteners) {
+      const kept = list.filter((f) => { let o = f.obj; while (o && o !== root) o = o.parent; return o === root; });
+      if (kept.length !== list.length) { if (kept.length) { kept.order = list.order; fasteners.set(setId, kept); } else fasteners.delete(setId); }
+    }
+    // 2. ajoute les pièces du modèle
+    const fresh = [];
+    for (const node of [...gltf.scene.children]) {
+      const id = node.userData.partId;
+      if (!id) continue;
+      const g = new THREE.Group();
+      g.userData.partId = id;
+      g.userData.model = url;
+      g.userData.explode = new THREE.Vector3(...(node.userData.explode || [0, 0, 0]));
+      for (const child of [...node.children]) {
+        const fx = child.userData.fx;
+        g.add(child);
+        if (fx) {
+          if (!fasteners.has(fx)) fasteners.set(fx, []);
+          child.userData.fastener = fx;
+          child.traverse((c) => { if (c.isMesh) c.userData.fastener = fx; });
+          const idx = +child.name.split('.').pop() || 0;
+          fasteners.get(fx).push({ obj: child, idx, dir: new THREE.Vector3(...child.userData.dir).normalize(), base: child.position.clone(), q0: child.quaternion.clone(), travel: child.userData.travel, spin: child.userData.kind !== 'pin' });
+        }
+      }
+      root.add(g);
+      if (!parts.has(id)) parts.set(id, []);
+      parts.get(id).push(g);
+      fresh.push(g);
+    }
+    for (const list of fasteners.values()) list.sort((a, b) => (a.idx ?? 0) - (b.idx ?? 0));
+    if (fasteners.has('vis-culasse')) fasteners.get('vis-culasse').order = [7, 5, 2, 4, 10, 9, 3, 1, 6, 8];
+    // 3. un matériau par maillage (la mise en évidence modifie le matériau), ombres, état de base
+    for (const g of fresh) {
+      g.userData.basePos = g.position.clone();
+      g.traverse((o) => {
+        if (!o.isMesh) return;
+        o.material = o.material.clone();
+        o.castShadow = true;
+        o.receiveShadow = true;
+        o.userData.baseOpacity = o.material.opacity ?? 1;
+        o.userData.baseTransparent = o.material.transparent;
+        o.userData.baseEmissive = o.material.emissive.getHex();
+      });
+    }
   }
 }

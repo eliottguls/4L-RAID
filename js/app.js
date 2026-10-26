@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { buildCar, setBodyColor } from './car.js';
+import { buildCar, setBodyColor, loadModels } from './car.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { VEHICLE, SYSTEMS, PARTS, PROCEDURES, MAINTENANCE, FASTENERS } from './data.js';
 import { restoreRta, loadRtaFile, forgetRta, hasRta, showPage, initRtaDialog } from './rta.js';
@@ -12,6 +12,7 @@ const systemOf = (id) => SYSTEMS.find((s) => s.id === PARTS[id]?.system);
 const procById = (id) => PROCEDURES.find((p) => p.id === id);
 const BODY_PARTS = ['caisse', 'capot', 'portes', 'hayon', 'vitrage', 'pare-chocs', 'calandre'];
 const DIFFICULTY = ['', 'Facile', 'Moyen', 'Atelier'];
+const INNER_PARTS = new Set(['chemises-pistons', 'bielles', 'vilebrequin', 'arbre-cames', 'culbuterie', 'soupapes', 'joint-culasse', 'chaine-distribution', 'pompe-huile', 'volant-moteur', 'embrayage']);
 
 // Procédures liées à chaque pièce
 const procsForPart = {};
@@ -68,13 +69,26 @@ const grid = new THREE.PolarGridHelper(8, 16, 12, 64, 0x3d342b, 0x332b24);
 grid.position.y = 0.002;
 scene.add(grid);
 
-const { root: car, parts, fasteners } = buildCar();
+const model = buildCar();
+const { root: car, parts, fasteners } = model;
 scene.add(car);
 $('#loading').remove();
 
-const allGroups = [...parts.values()].flat();
-const allMeshes = [];
-for (const g of allGroups) g.traverse((o) => { if (o.isMesh) { o.userData.group = g; allMeshes.push(o); } });
+let allGroups = [];
+let allMeshes = [];
+function reindex() {
+  allGroups = [...parts.values()].flat();
+  allMeshes = [];
+  for (const g of allGroups) g.traverse((o) => { if (o.isMesh) { o.userData.group = g; allMeshes.push(o); } });
+}
+reindex();
+// Modèles détaillés (Blender) : chargés après le premier affichage, ils remplacent les pièces simplifiées.
+loadModels(model).then(() => {
+  for (const sprites of seqSprites.values()) for (const { sp } of sprites) scene.remove(sp);
+  seqSprites.clear();
+  reindex();
+  if (state.proc || state.selected) route(); else applyVisualState();
+}).catch((e) => console.warn('Modèle détaillé non chargé :', e));
 
 // Sur mobile, le panneau du bas cache une partie de la vue : on décale le centre
 // de projection pour que la pièce reste visible au-dessus du panneau.
@@ -150,7 +164,8 @@ function applyVisualState() {
     } else if (state.selected) {
       if (id === state.selected) opacity = 1;
       else if (isBody && !BODY_PARTS.includes(state.selected)) opacity = 0.06;
-      else opacity = 0.3;
+      // pièce interne (vilebrequin, pistons…) : les pièces autour s'effacent davantage pour la laisser voir
+      else opacity = INNER_PARTS.has(state.selected) ? 0.1 : 0.3;
     } else if (state.xray && (isBody || sys === 'interieur')) {
       opacity = isBody ? 0.08 : 0.35;
     }
@@ -222,7 +237,7 @@ function focusNow(ids) {
   // réduit le champ vertical (setViewOffset) : on recule d'autant.
   const narrow = Math.max(1, 1 / Math.max(camera.aspect, 0.35)) ** 0.6;
   const sheet = camera.view?.enabled ? camera.view.fullHeight / camera.view.height : 1;
-  const dist = THREE.MathUtils.clamp((size * 1.7 + 0.8) * narrow * sheet, 1.5, 10);
+  const dist = THREE.MathUtils.clamp((size * 1.7 + 0.8) * narrow * sheet, 1.0, 10);
   const dir = camera.position.clone().sub(controls.target).normalize();
   if (dir.y < 0.15) dir.y = 0.35;
   dir.normalize();

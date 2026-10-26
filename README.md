@@ -42,11 +42,24 @@ Tout le contenu est dans `js/data.js` :
 - `PROCEDURES` : les interventions. Chaque étape peut avoir `remove` (pièces qui s’écartent dans la 3D) et `focus` (pièces mises en évidence).
 - `FASTENERS` : les jeux de fixations (nom, pièce, nombre, couple, pages). `STEP_FASTENERS` relie les étapes aux fixations : `unscrew` (à dévisser), `screw` (à revisser), `sequence` (ordre de serrage numéroté).
 
-Le modèle 3D est dans `js/car.js`. Chaque pièce est enregistrée avec `part('id', [décalage éclaté x, y, z], [maillages])`, et l’`id` doit correspondre à une entrée de `PARTS`. Les fixations sont posées avec `fasten(groupe, 'id-du-jeu', positions, options)`, et l’id doit correspondre à une entrée de `FASTENERS`.
+Le modèle 3D a deux couches :
+
+- `models/moteur.glb` et `models/trains.glb` : moteur (avec les pièces internes : chemises, pistons, bielles, vilebrequin, arbre à cames, culbuterie, soupapes, chaîne, pompe à huile), boîte-pont, transmissions, trains, direction et freins, modélisés dans Blender d'après les cotes et les vues éclatées de la RTA. Ils sont générés par les scripts `tools/blender/moteur.py` et `tools/blender/trains.py` :
+
+  ```sh
+  pip install bpy          # Blender en module Python
+  python3 tools/blender/moteur.py
+  python3 tools/blender/trains.py
+  ```
+
+  Chaque nœud du glTF porte `extras.partId` (la pièce, clé de `PARTS`) ou `extras.fx` (une vis : jeu, sens et course de dévissage). `tools/view.html?f=../models/moteur.glb` affiche un modèle seul (options dans le fichier).
+- `js/car.js` : le reste de la voiture (carrosserie, intérieur, électricité…), construit en code. Ces pièces procédurales servent aussi de secours tant que les `.glb` ne sont pas chargés.
+
+Dans `js/car.js`, chaque pièce est enregistrée avec `part('id', [décalage éclaté x, y, z], [maillages])`, et l’`id` doit correspondre à une entrée de `PARTS`. Les fixations sont posées avec `fasten(groupe, 'id-du-jeu', positions, options)`, et l’id doit correspondre à une entrée de `FASTENERS`.
 
 ## Limites
 
-- Le modèle 3D est **procédural et simplifié** (formes géométriques placées aux cotes de la RTA : empattement, voies, porte-à-faux…). Il sert à situer les pièces, pas à les représenter fidèlement. On peut le remplacer plus tard par un vrai modèle `.glb`.
+- Le moteur et les trains reprennent les cotes de la RTA (alésage, course, entraxe de bielle, diamètres de soupapes, de disques, de tambours, voies, empattements…). Ce que la RTA ne cote pas (entraxe des cylindres, formes de fonderie, bras de suspension) est estimé d'après ses vues éclatées : fidèle à l'œil, pas au millimètre. La carrosserie est encore procédurale et simplifiée.
 - Le nombre et la position des vis sont **indicatifs**, sauf quand la RTA les donne (vis de culasse, écrous de roue, bouchons…) : la fiche indique alors la page.
 - Les numéros de page renvoient au PDF scanné (1 à 93), pas à la pagination imprimée de la RTA.
 - Le texte a été relu à partir d’un scan : en cas de doute sur une valeur, vérifie la page de la RTA indiquée.
