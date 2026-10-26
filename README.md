@@ -10,6 +10,7 @@ Le contenu vient de la Revue Technique Automobile « Renault 4 GTL » (étude de
 - **Recherche** en langage courant : « mon moteur chauffe », « changer le delco », « embrayage patine »…
 - **33 procédures** : outils, ingrédients, couples de serrage et étapes. Chaque étape déplace dans la 3D les pièces à déposer.
 - **55 fiches pièces** avec les valeurs de la RTA (couples, jeux, capacités, références).
+- **Vis et fixations** : environ 48 jeux de vis, écrous, bouchons et goupilles sont modélisés. À chaque étape, ceux à dévisser sortent en tournant et s’allument en bleu, avec le couple de serrage. Pour la culasse, l’ordre de serrage s’affiche en numéros. Dans une fiche pièce, la liste « Vis et fixations » permet de voir chaque jeu se dévisser.
 - **Entretien** : intervalles et capacités.
 - **Ma RTA** : charge ton PDF de la revue technique pour ouvrir la bonne page (avec les schémas) depuis chaque fiche. Le PDF reste dans ton navigateur et n’est jamais publié.
 - **Hors-ligne** : après une première visite avec du réseau, le site marche sans connexion (utile dans le désert).
@@ -39,12 +40,14 @@ Tout le contenu est dans `js/data.js` :
 
 - `PARTS` : les fiches pièces (nom, système, description, caractéristiques, pages du PDF).
 - `PROCEDURES` : les interventions. Chaque étape peut avoir `remove` (pièces qui s’écartent dans la 3D) et `focus` (pièces mises en évidence).
+- `FASTENERS` : les jeux de fixations (nom, pièce, nombre, couple, pages). `STEP_FASTENERS` relie les étapes aux fixations : `unscrew` (à dévisser), `screw` (à revisser), `sequence` (ordre de serrage numéroté).
 
-Le modèle 3D est dans `js/car.js`. Chaque pièce est enregistrée avec `part('id', [décalage éclaté x, y, z], [maillages])`, et l’`id` doit correspondre à une entrée de `PARTS`.
+Le modèle 3D est dans `js/car.js`. Chaque pièce est enregistrée avec `part('id', [décalage éclaté x, y, z], [maillages])`, et l’`id` doit correspondre à une entrée de `PARTS`. Les fixations sont posées avec `fasten(groupe, 'id-du-jeu', positions, options)`, et l’id doit correspondre à une entrée de `FASTENERS`.
 
 ## Limites
 
 - Le modèle 3D est **procédural et simplifié** (formes géométriques placées aux cotes de la RTA : empattement, voies, porte-à-faux…). Il sert à situer les pièces, pas à les représenter fidèlement. On peut le remplacer plus tard par un vrai modèle `.glb`.
+- Le nombre et la position des vis sont **indicatifs**, sauf quand la RTA les donne (vis de culasse, écrous de roue, bouchons…) : la fiche indique alors la page.
 - Les numéros de page renvoient au PDF scanné (1 à 93), pas à la pagination imprimée de la RTA.
 - Le texte a été relu à partir d’un scan : en cas de doute sur une valeur, vérifie la page de la RTA indiquée.
 - GitHub Pages ne fait que du statique : pas de serveur, donc pas de chat IA intégré ni de comptes utilisateurs.
