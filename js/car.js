@@ -1028,7 +1028,11 @@ export const MODELS = [
   },
   {
     url: 'models/chassis.glb',
-    replaces: ['plateforme', 'roues', 'roue-secours', 'reservoir', 'echappement'],
+    replaces: ['roues', 'roue-secours'],
+  },
+  {
+    url: 'models/soubassement.glb',
+    replaces: ['plateforme', 'reservoir', 'echappement'],
   },
   {
     url: 'models/interieur.glb',

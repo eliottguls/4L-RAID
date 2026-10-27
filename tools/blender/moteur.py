@@ -578,7 +578,7 @@ pe.add(cyl(0.025, 0.012, (EX + 0.03, CAM_Y - 0.02, 0.176), (0, 0, 1), acier, 28)
 for s in (1, -1):
     pe.add(cyl(0.004, 0.02, (EX + 0.03 + s * 0.02, CAM_Y + 0.01, 0.16), (0, 1, 0), alu, 10))
 pe.add(tube([(EX + 0.05, CAM_Y + 0.02, 0.16), (EX + 0.04, YD + 0.06, 0.13), (EX + 0.03, YH + 0.07, 0.0), (EX + 0.04, CY + 0.03, -0.14)], 0.0035, caoutchouc, seg=6))
-pe.add(tube([(EX + 0.01, CAM_Y + 0.02, 0.16), (EX - 0.05, CAM_Y + 0.02, 0.21), (0.20, 0.25, 0.18), (-0.84, 0.25, -0.20)], 0.0035, caoutchouc, seg=6))
+pe.add(tube([(EX + 0.01, CAM_Y + 0.02, 0.16), (EX + 0.005, CAM_Y + 0.045, 0.20), (EX - 0.005, CAM_Y + 0.063, 0.24), (EX - 0.015, CAM_Y + 0.067, 0.25)], 0.0035, caoutchouc, seg=6))   # arrivée du filtre à essence (soubassement.py)
 fasteners(pe, 'fix-pompe-essence', [((EX + 0.03 + s * 0.02, CAM_Y - 0.02, 0.139), (0, 0, 1)) for s in (1, -1)], kind='nut', r=0.006, length=0.02, travel=0.04)
 
 fh = Part('filtre-huile', (0, -0.05, 0.45))

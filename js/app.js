@@ -69,6 +69,11 @@ scene.add(ground);
 const grid = new THREE.PolarGridHelper(8, 16, 12, 64, 0x3d342b, 0x332b24);
 grid.position.y = 0.002;
 scene.add(grid);
+// lumière du dessous, allumée seulement en vue de dessous (plateforme, échappement, réservoir)
+const lowLight = new THREE.DirectionalLight(0xfff1dc, 1.3);
+lowLight.position.set(-2, -6, 3);
+lowLight.visible = false;
+scene.add(lowLight);
 
 const model = buildCar();
 const { root: car, parts, fasteners } = model;
@@ -118,6 +123,7 @@ const state = {
   proc: null,       // procédure active
   step: -1,         // -1 = vue d'ensemble
   hovered: null,
+  under: false,     // vue de dessous : sol masqué, caméra sous la voiture
 };
 
 let previewFx = null; // jeu de vis montré depuis une fiche pièce
@@ -246,13 +252,32 @@ function focusNow(ids) {
   const sheet = camera.view?.enabled ? camera.view.fullHeight / camera.view.height : 1;
   const dist = THREE.MathUtils.clamp((size * 1.7 + 0.8) * narrow * sheet, 1.0, 10);
   const dir = camera.position.clone().sub(controls.target).normalize();
-  if (dir.y < 0.15) dir.y = 0.35;
+  // pièces du soubassement : on passe dessous ; sinon on reste au-dessus du sol
+  setUnder(ids.length > 0 && ids.every((id) => PARTS[id]?.below), false);
+  if (state.under) { if (dir.y > -0.3) dir.y = -0.6; } else if (dir.y < 0.15) dir.y = 0.35;
   dir.normalize();
   tweenCamera(center.clone().add(dir.multiplyScalar(dist)), center);
 }
 
 function resetView() {
+  setUnder(false, false);
   tweenCamera(HOME.pos.clone(), HOME.target.clone());
+}
+
+// Vue de dessous : masque le sol et laisse la caméra passer sous la voiture.
+function setUnder(on, move = true) {
+  if (state.under === on) return;
+  state.under = on;
+  ground.visible = grid.visible = !on;
+  lowLight.visible = on;
+  controls.maxPolarAngle = on ? Math.PI * 0.98 : Math.PI * 0.495;
+  underBtn.setAttribute('aria-pressed', String(on));
+  if (!move) return;
+  const t = controls.target.clone();
+  const off = camera.position.clone().sub(t);
+  off.y = on ? -Math.max(1.2, Math.abs(off.y)) : Math.max(1.2, Math.abs(off.y));
+  if (!on && t.y < 0.3) t.y = 0.6;
+  tweenCamera(t.clone().add(off), t);
 }
 
 // ===================== Interaction 3D =====================
@@ -712,6 +737,8 @@ function setXray(on) {
   applyVisualState();
 }
 xrayBtn.addEventListener('click', () => setXray(!state.xray));
+const underBtn = $('#under-btn');
+underBtn.addEventListener('click', () => setUnder(!state.under));
 
 const explodeInput = $('#explode');
 explodeInput.addEventListener('input', () => { state.explode = parseFloat(explodeInput.value); applyVisualState(); });
@@ -740,6 +767,7 @@ document.addEventListener('keydown', (e) => {
   if (typing) return;
   if (e.key === 'x' || e.key === 'X') setXray(!state.xray);
   if (e.key === 'r' || e.key === 'R') resetView();
+  if (e.key === 'd' || e.key === 'D') setUnder(!state.under);
   if (e.key === 'e' || e.key === 'E') {
     state.explode = state.explode > 0.5 ? 0 : 1;
     explodeInput.value = state.explode;

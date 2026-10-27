@@ -16,7 +16,7 @@ import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import (M, M_img, Part, T, box, quad, copy, cut, cyl, export, extrude, fastener, fasteners, grid, lathe,  # noqa: E402
-                 mirror_z, orient, outline_round, prism, reset, solidify, torus, tube)
+                 apply_all, delete, mirror_z, orient, outline_round, prism, reset, solidify, torus, tube)
 
 reset()
 
@@ -778,7 +778,34 @@ wiper_bits.append(tube([(0.60, 0.99, 0.18), (0.64, 1.025, 0.02), (0.655, 1.035, 
 # Pièces du site
 # =====================================================================================
 pc = Part('caisse', (0, 0.25, 0))
-pc.add(lower, upper, roof, fender, *hood_gutter, *front_bits, *gutters, *q_seal, *strips_body, *filler, ws_seal)
+pc.add(lower, upper, roof, *hood_gutter, *front_bits, *gutters, *q_seal, *strips_body, *filler, ws_seal)
+
+
+def split_side(o, s):
+    """Copie de la moitié z > 0 (s = 1) ou z < 0 (s = -1) d'un maillage symétrique."""
+    c = copy(o, o.name + ('-d' if s > 0 else '-g'))
+    apply_all(c)
+    bm = bmesh.new()
+    bm.from_mesh(c.data)
+    mw = c.matrix_world
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if -(mw @ f.calc_center_median()).y * s < 0], context='FACES')
+    bm.to_mesh(c.data)
+    bm.free()
+    return c
+
+
+# ailes avant boulonnées : 5 vis le long du bord supérieur (sous le capot), 1 en bas à l'avant,
+# 1 au pied avant (nombre et position indicatifs, la RTA ne les donne pas)
+for s in (1, -1):
+    pa = Part('ailes-av', (0.15, 0.1, 0.5 * s))
+    pa.add(split_side(fender, s))
+    va = []
+    for x in (0.78, 1.00, 1.22, 1.44, 1.62):
+        va.append(((x, fender_top(x) + 0.004, s * (HW(x) + GAP + 0.014)), (0, 1, 0)))
+    va.append(((1.70, 0.44, s * (W(1.70) - 0.03)), (0, -1, 0)))
+    va.append(((0.62, 0.62, s * (zside(0.62, 0.62) - 0.012)), (0, 0, -s)))
+    fasteners(pa, 'vis-ailes-av', va, kind='bolt', r=0.005, length=0.02, travel=0.04)
+delete(fender)
 for name, _, s in DOORS:
     p = Part('portes', (0, 0, 0.6 * s))
     p.add(*door_skins[name], *door_extra[name])
