@@ -181,6 +181,9 @@ body.has-detail .layout { grid-template-columns: var(--sidebar) 1fr var(--detail
 .badge.soft { color: var(--muted); }
 .warning { background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 8px; padding: 10px 12px; font-size: 14px; }
 details { border-top: 1px solid var(--line); padding: 8px 0; }
+.sources { margin-top: 10px; font-size: 13px; }
+.sources ul { margin: 4px 0 0; padding-left: 18px; }
+.sources a { color: inherit; overflow-wrap: anywhere; }
 details summary { cursor: pointer; font-weight: 600; }
 details ul { margin: 6px 0 4px; padding-left: 18px; font-size: 14px; }
 .specs { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 14px; }

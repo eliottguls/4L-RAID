@@ -1047,6 +1047,10 @@ export const MODELS = [
     url: 'models/electricite.glb',
     replaces: [],
   },
+  {
+    url: 'models/raid.glb',
+    replaces: [],
+  },
 ];
 
 export async function loadModels({ root, parts, fasteners }, models = MODELS) {
