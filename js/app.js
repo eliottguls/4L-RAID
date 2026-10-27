@@ -87,6 +87,7 @@ loadModels(model).then(() => {
   for (const sprites of seqSprites.values()) for (const { sp } of sprites) scene.remove(sp);
   seqSprites.clear();
   reindex();
+  setBodyColor(parts, $('#body-color').value);
   if (state.proc || state.selected) route(); else applyVisualState();
 }).catch((e) => console.warn('Modèle détaillé non chargé :', e));
 

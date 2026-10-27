@@ -1018,12 +1018,32 @@ export const MODELS = [
     replaces: ['boite', 'transmissions', 'triangles-av', 'porte-fusee', 'barres-torsion-av', 'amortisseurs-av', 'direction',
       'bras-ar', 'barres-torsion-ar', 'amortisseurs-ar', 'disques-av', 'etriers-av', 'tambours-ar'],
   },
+  {
+    url: 'models/caisse.glb',
+    replaces: ['caisse', 'portes', 'hayon', 'capot', 'vitrage', 'pare-chocs', 'calandre', 'phares', 'feux', 'essuie-glace'],
+  },
+  {
+    url: 'models/chassis.glb',
+    replaces: ['plateforme', 'roues', 'roue-secours', 'reservoir', 'echappement'],
+  },
+  {
+    url: 'models/interieur.glb',
+    replaces: ['sieges-av', 'banquette', 'planche-bord', 'volant', 'levier-vitesses', 'pedalier', 'frein-main'],
+  },
+  {
+    url: 'models/equipements.glb',
+    replaces: ['radiateur', 'motoventilateur', 'vase-expansion', 'durites', 'batterie', 'alternateur', 'demarreur',
+      'fusibles', 'bobine', 'lave-glace', 'maitre-cylindre', 'limiteur'],
+  },
 ];
 
 export async function loadModels({ root, parts, fasteners }, models = MODELS) {
   const loader = new GLTFLoader();
-  for (const { url, replaces } of models) {
-    const gltf = await loader.loadAsync(url);
+  // téléchargements en parallèle, remplacement dans l'ordre ; un modèle absent laisse sa version simplifiée
+  const loads = models.map(({ url }) => loader.loadAsync(url).catch((e) => { console.warn('Modèle non chargé :', url, e); return null; }));
+  for (const [i, { url, replaces }] of models.entries()) {
+    const gltf = await loads[i];
+    if (!gltf) continue;
     // 1. retire les pièces procédurales remplacées (et leurs fixations)
     const drop = new Set(replaces);
     for (const [id, groups] of parts) {
@@ -1052,7 +1072,7 @@ export async function loadModels({ root, parts, fasteners }, models = MODELS) {
           child.userData.fastener = fx;
           child.traverse((c) => { if (c.isMesh) c.userData.fastener = fx; });
           const idx = +child.name.split('.').pop() || 0;
-          fasteners.get(fx).push({ obj: child, idx, dir: new THREE.Vector3(...child.userData.dir).normalize(), base: child.position.clone(), q0: child.quaternion.clone(), travel: child.userData.travel, spin: child.userData.kind !== 'pin' });
+          fasteners.get(fx).push({ obj: child, idx, dir: new THREE.Vector3(...child.userData.dir).normalize(), base: child.position.clone(), q0: child.quaternion.clone(), travel: child.userData.travel, spin: !['pin', 'fuse'].includes(child.userData.kind) });
         }
       }
       root.add(g);
@@ -1068,7 +1088,10 @@ export async function loadModels({ root, parts, fasteners }, models = MODELS) {
       g.traverse((o) => {
         if (!o.isMesh) return;
         o.material = o.material.clone();
-        o.castShadow = true;
+        // matériaux nommés dans les scripts Blender : peinture (couleur modifiable) et vitres
+        if (o.material.name === 'peinture') o.material.userData.paint = true;
+        if (o.material.name === 'vitre') { o.userData.glass = true; o.material.depthWrite = false; }
+        o.castShadow = !o.userData.glass;
         o.receiveShadow = true;
         o.userData.baseOpacity = o.material.opacity ?? 1;
         o.userData.baseTransparent = o.material.transparent;

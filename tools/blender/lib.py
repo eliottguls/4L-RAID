@@ -362,6 +362,14 @@ def fastener(part, set_id, pos, d, kind='bolt', r=0.008, length=0.04, travel=Non
         cap = cyl(r * 0.45, r * 1.2, (0, 0, 0), (0, 1, 0), black, 12)
         cap.location = (0, 0, r + length * 0.62)
         pieces.append(cap)
+    elif kind == 'fuse':
+        c = cyl(r * 0.6, length, (0, 0, 0), (0, 1, 0), ceram, 12)
+        c.location = (0, 0, 0)
+        pieces.append(c)
+        for k in (-1, 1):
+            e = cyl(r * 0.68, r * 0.9, (0, 0, 0), (0, 1, 0), zinc, 12)
+            e.location = (0, 0, k * length / 2)
+            pieces.append(e)
     elif kind == 'pin':
         p = cyl(r, length, (0, 0, 0), (0, 1, 0), zinc, 10)
         p.location = (0, 0, -length / 2)
@@ -428,3 +436,167 @@ def export(path):
             o.data.calc_loop_triangles()
             tris += len(o.data.loop_triangles)
     print(f'export {path}: {len(roots)} pièces, {tris} triangles')
+
+
+# ---------------------------------------------------------------- surfaces de carrosserie
+def grid(P, mat=None, name='grid', close_i=False, close_j=False, keep=None, smooth_angle=50):
+    """Surface à partir d'une grille de points P[i][j] (repère du site). keep(i, j) filtre les
+    quadrilatères. Les normales sont laissées dans l'ordre de la grille (voir orient)."""
+    bm = bmesh.new()
+    ni, nj = len(P), len(P[0])
+    V = [[bm.verts.new(T(*P[i][j])) for j in range(nj)] for i in range(ni)]
+    for i in range(ni if close_i else ni - 1):
+        for j in range(nj if close_j else nj - 1):
+            if keep and not keep(i, j):
+                continue
+            i2, j2 = (i + 1) % ni, (j + 1) % nj
+            bm.faces.new((V[i][j], V[i2][j], V[i2][j2], V[i][j2]))
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
+    bmesh.ops.dissolve_degenerate(bm, dist=1e-6, edges=bm.edges)
+    o = _obj_from_bm(bm, name, mat)
+    smooth(o, smooth_angle)
+    return o
+
+
+def orient(o, inside=(0.0, 0.9, 0.0)):
+    """Oriente les normales vers l'extérieur (loin du point `inside`, repère du site)."""
+    me = o.data
+    c = T(*inside)
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    score = sum((f.calc_center_median() - c).dot(f.normal) * f.calc_area() for f in bm.faces)
+    if score < 0:
+        for f in bm.faces:
+            f.normal_flip()
+    bm.to_mesh(me)
+    bm.free()
+    return o
+
+
+def solidify(o, t, offset=-1.0):
+    m = o.modifiers.new('solid', 'SOLIDIFY')
+    m.thickness = t
+    m.offset = offset
+    m.use_even_offset = True
+    m.use_quality_normals = True
+    apply_all(o)
+    return o
+
+
+def prism(outline, axis, z0, z1, name='cut'):
+    """Prisme fermé : contour 2D extrudé de z0 à z1 le long d'un axe du site.
+    axis 'z' : contour en (x, y) ; 'x' : contour en (z, y) ; 'y' : contour en (x, z)."""
+    bm = bmesh.new()
+
+    def P3(u, v, w):
+        if axis == 'z':
+            return T(u, v, w)
+        if axis == 'x':
+            return T(w, v, u)
+        return T(u, w, v)
+    a = [bm.verts.new(P3(u, v, z0)) for u, v in outline]
+    b = [bm.verts.new(P3(u, v, z1)) for u, v in outline]
+    n = len(outline)
+    bm.faces.new(a)
+    bm.faces.new(b[::-1])
+    for i in range(n):
+        bm.faces.new((a[i], a[(i + 1) % n], b[(i + 1) % n], b[i]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return _obj_from_bm(bm, name, None)
+
+
+def cut(o, cutter, op='DIFFERENCE', keep_cutter=False):
+    m = o.modifiers.new('bool', 'BOOLEAN')
+    m.object = cutter
+    m.operation = op
+    m.solver = 'EXACT'
+    apply_all(o)
+    if not keep_cutter:
+        delete(cutter)
+    smooth(o, 40)
+    return o
+
+
+def copy(o, name=None):
+    c = o.copy()
+    c.data = o.data.copy()
+    bpy.context.scene.collection.objects.link(c)
+    if name:
+        c.name = name
+    return c
+
+
+def mirror_z(o, name=None):
+    """Copie symétrique par rapport au plan médian (z → -z du site)."""
+    c = copy(o, name)
+    apply_all(c)
+    me = c.data
+    for v in me.vertices:
+        v.co.y = -v.co.y
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    for f in bm.faces:
+        f.normal_flip()
+    bm.to_mesh(me)
+    bm.free()
+    me.update()
+    return c
+
+
+def outline_round(pts, r, n=5):
+    """Arrondit les angles d'un polygone 2D (rayon r, ou liste de rayons par sommet)."""
+    out = []
+    m = len(pts)
+    rs = r if isinstance(r, (list, tuple)) else [r] * m
+    for i in range(m):
+        p0, p1, p2 = Vector(pts[i - 1]), Vector(pts[i]), Vector(pts[(i + 1) % m])
+        ri = rs[i]
+        if ri <= 0:
+            out.append(tuple(p1))
+            continue
+        d1, d2 = (p0 - p1).normalized(), (p2 - p1).normalized()
+        ang = d1.angle(d2)
+        t = min(ri / math.tan(ang / 2), (p0 - p1).length * 0.49, (p2 - p1).length * 0.49)
+        a, b = p1 + d1 * t, p1 + d2 * t
+        for k in range(n + 1):
+            s = k / n
+            q = (a * (1 - s) + p1 * s) * (1 - s) + (p1 * (1 - s) + b * s) * s   # Bézier quadratique
+            out.append((q.x, q.y))
+    return out
+
+
+def M_img(name, png, metal=0.0, rough=0.5):
+    """Matériau à texture (image PNG intégrée au glb)."""
+    if name in _mats:
+        return _mats[name]
+    m = bpy.data.materials.new(name)
+    m.use_nodes = True
+    nt = m.node_tree
+    bsdf = nt.nodes.get('Principled BSDF')
+    tex = nt.nodes.new('ShaderNodeTexImage')
+    tex.image = bpy.data.images.load(png)
+    tex.image.pack()
+    nt.links.new(tex.outputs['Color'], bsdf.inputs['Base Color'])
+    bsdf.inputs['Metallic'].default_value = metal
+    bsdf.inputs['Roughness'].default_value = rough
+    _mats[name] = m
+    return m
+
+
+def quad(center, w, h, normal, mat, name='quad'):
+    """Rectangle texturé w × h (u horizontal, v vers le haut), face tournée vers `normal`
+    (axe du site : (±1, 0, 0) ou (0, 0, ±1))."""
+    bm = bmesh.new()
+    uv = bm.loops.layers.uv.new('UVMap')
+    nx, _, nz = normal
+    # axe horizontal du rectangle vu de face (vers la droite de l'observateur)
+    ux, uz = (0, -1) if nx > 0 else (0, 1) if nx < 0 else (1, 0) if nz > 0 else (-1, 0)
+    cx, cy, cz = center
+    corners = [(-w / 2, -h / 2, 0, 0), (w / 2, -h / 2, 1, 0), (w / 2, h / 2, 1, 1), (-w / 2, h / 2, 0, 1)]
+    vs = [bm.verts.new(T(cx + ux * a, cy + b, cz + uz * a)) for a, b, _, _ in corners]
+    f = bm.faces.new(vs)
+    for loop, (_, _, u, v) in zip(f.loops, corners):
+        loop[uv].uv = (u, v)
+    o = _obj_from_bm(bm, name, mat)
+    return o

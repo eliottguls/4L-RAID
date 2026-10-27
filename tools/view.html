@@ -33,12 +33,14 @@ camera.position.set(t[0] + d * Math.cos(el) * Math.cos(az), t[1] + d * Math.sin(
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(...t); controls.update();
 const only = q.get('only')?.split(',');
+const hide = q.get('hide')?.split(',') || [];
 const files = (q.get('f') || '../models/moteur.glb').split('|');
 let pending = files.length;
 for (const f of files) new GLTFLoader().load(f, (g) => {
   g.scene.traverse((o) => {
     const ex = o.userData || {};
     if (ex.partId && only && !only.includes(ex.partId)) o.visible = false;
+    if (ex.partId && hide.includes(ex.partId)) o.visible = false;
     if (ex.partId && q.get('explode')) o.position.add(new THREE.Vector3(...(ex.explode || [0, 0, 0])));
     if (ex.fx && q.get('fx')) o.position.add(new THREE.Vector3(...ex.dir).multiplyScalar(ex.travel));
     if (o.isMesh && q.get('xray') && !o.parent.userData.fx) { o.material = o.material.clone(); o.material.transparent = true; o.material.opacity = 0.25; o.material.depthWrite = false; }
