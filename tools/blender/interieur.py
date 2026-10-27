@@ -14,7 +14,7 @@ import tempfile
 from PIL import Image
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib import M, M_img, Part, uv_box, bevel, box, smooth, cyl, export, extrude, fastener, fasteners, lathe, reset, rounded_rect, torus, tube  # noqa: E402
+from lib import M, M_img, Part, uv_box, bevel, box, smooth, cyl, export, extrude, fastener, fasteners, grid, lathe, orient, reset, rounded_rect, torus, tube  # noqa: E402
 
 reset()
 OUT = sys.argv[sys.argv.index('--out') + 1] if '--out' in sys.argv else os.path.join(os.path.dirname(__file__), '..', '..', 'models', 'interieur.glb')
@@ -345,5 +345,31 @@ for k, sgn in enumerate((-1, 1)):
     tip = (0.462, 0.99 - k * 0.02, DRIVER_Z + sgn * 0.17)
     vo.add(cyl(0.008, 0.035, tip, (0.1, 0, sgn), noir, 14, name='embout-commodo'))
     vo.add(box((0.03, 0.04, 0.035), (0.50, 0.985 - k * 0.02, DRIVER_Z + sgn * 0.035), planche_f, 0.006, 'boitier-commodo'))
+
+# =====================================================================================
+# GARNITURES : ciel de pavillon tendu sur arceaux, poignées de maintien (non décrits par la RTA :
+# implantation estimée d'après la photo du poste de conduite p. XVIII)
+# =====================================================================================
+ga = Part('garnitures', (0, 0.3, 0))
+ciel_m = M('ciel-pavillon', 0xb9b3a6, 0.0, 0.95)
+
+
+def ciel_y(z):
+    return 1.493 + 0.048 * (1 - (z / 0.665) ** 2) - 0.012
+
+
+xs = [0.40 - k * 1.75 / 24 for k in range(25)]
+zs = [-0.64 + k * 1.28 / 16 for k in range(17)]
+P = [[(x, ciel_y(z) - 0.004 * math.sin(math.pi * ((0.40 - x) / 1.75 * 5 % 1)), z) for z in zs] for x in xs]
+ga.add(orient(grid(P, ciel_m, 'ciel', smooth_angle=80), inside=(-0.5, 2.5, 0.0)))   # face visible vers l'habitacle
+for k in range(1, 5):     # arceaux (coutures transversales)
+    x = 0.40 - k * 1.75 / 5
+    ga.add(tube([(x, ciel_y(z) - 0.002, z) for z in zs], 0.0025, ciel_m, 'couture', seg=6, res=4))
+for x, z in ((0.10, 0.62), (-0.62, 0.62), (-0.62, -0.62)):
+    s_ = 1 if z > 0 else -1
+    ga.add(tube([(x - 0.11, 1.452, z), (x - 0.10, 1.41, z - s_ * 0.025), (x + 0.10, 1.41, z - s_ * 0.025), (x + 0.11, 1.452, z)], 0.010, noir, 'poignee-maintien', seg=10, res=8))
+    for dx in (-0.11, 0.11):
+        ga.add(box((0.03, 0.012, 0.03), (x + dx, 1.455, z), noir, 0.004, 'pied-poignee'))
+fasteners(ga, 'vis-poignees', [((x + dx, 1.448, z), (0, -1, 0)) for x, z in ((0.10, 0.62), (-0.62, 0.62), (-0.62, -0.62)) for dx in (-0.11, 0.11)], kind='screw', r=0.004, length=0.015, travel=0.02)
 
 export(OUT)

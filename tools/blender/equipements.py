@@ -14,7 +14,8 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib import M, Part, box, cyl, export, extrude, fastener, fasteners, lathe, reset, rounded_rect, torus, tube  # noqa: E402
+from lib import M, M_img, Part, box, cyl, export, fastener, fasteners, grid, lathe, quad, reset, solidify, torus, tube  # noqa: E402
+import tempfile  # noqa: E402
 
 reset()
 OUT = sys.argv[sys.argv.index('--out') + 1] if '--out' in sys.argv else os.path.join(os.path.dirname(__file__), '..', '..', 'models', 'equipements.glb')
@@ -38,8 +39,8 @@ noir = M('noir', 0x1b1c1d, 0.1, 0.6)
 caoutchouc = M('caoutchouc', 0x1d1e1f, 0.0, 0.85)
 cuivre = M('cuivre', 0xb87333, 0.9, 0.3)
 laiton = M('laiton', 0xb59a52, 0.9, 0.35)
-faisceau = M('faisceau-radiateur', 0x5a4632, 0.6, 0.6)
-ailette = M('ailette', 0x3b2f24, 0.5, 0.7)
+faisceau = M('faisceau', 0x5a4632, 0.6, 0.6)
+zinc = M('zinc', 0xc9c4ae, 0.85, 0.3)
 plastique = M('plastique-translucide', 0xeeeee6, 0.0, 0.35, alpha=0.85)
 liquide = M('liquide-refroidissement', 0x3b6fb0, 0.0, 0.2, alpha=0.7)
 lave = M('liquide-lave-glace', 0x5a8fd0, 0.0, 0.2, alpha=0.6)
@@ -51,53 +52,133 @@ frein_liq = M('reservoir-frein', 0xe8e6d8, 0.0, 0.35, alpha=0.8)
 bleu = M('bobine', 0x2c3e55, 0.4, 0.4)
 
 # =====================================================================================
-# REFROIDISSEMENT
+# REFROIDISSEMENT (planche 11, p.38) : radiateur à boîtes à eau latérales (25), thermocontact (26)
+# et joint (27), plots (28, 29), barre de fixation (22), motoventilateur (19) avec ventilateur (21),
+# buse (20) et support (23), vase d'expansion (4) avec bouchon (1), soupape (2) et joint (3),
+# thermostat (17) dans le boîtier de pompe à eau, durites et colliers.
 # =====================================================================================
+def core_png():
+    """Faisceau vu de face : tubes plats verticaux et ailettes ondulées horizontales."""
+    from PIL import Image, ImageDraw
+    w, h = 1024, 640
+    im = Image.new('RGB', (w, h), (58, 45, 33))
+    d = ImageDraw.Draw(im)
+    for y in range(0, h, 4):        # ailettes (pas ≈ 1,8 mm)
+        d.line((0, y, w, y), fill=(92, 74, 54), width=1)
+    for k in range(40):             # tubes plats (pas ≈ 10 mm)
+        x = int((k + 0.5) * w / 40)
+        d.rectangle((x - 4, 0, x + 4, h), fill=(110, 86, 58))
+        d.line((x - 4, 0, x - 4, h), fill=(70, 55, 40), width=1)
+    path = os.path.join(tempfile.mkdtemp(prefix='faisceau-'), 'faisceau.png')
+    im.save(path)
+    return path
+
+
 RX = 1.692
+RY, RZ = 0.625, -0.04
+CW, CH = 0.41, 0.27                 # faisceau : surface frontale 12,32 dm² (p.22) → 0,41 × 0,30 hors tout
+ZL, ZR = RZ - CW / 2, RZ + CW / 2   # boîtes à eau gauche (entrée) et droite (sortie, thermocontact)
+core_m = M_img('faisceau-radiateur', core_png(), 0.6, 0.6)
 rad = Part('radiateur', (0.5, 0.15, 0))
-rad.add(box((0.032, 0.280, 0.440), (RX, 0.625, -0.04), faisceau))
-for k in range(24):     # tubes du faisceau (vus de face)
-    rad.add(box((0.034, 0.276, 0.004), (RX, 0.625, -0.255 + k * 0.0187), ailette))
-rad.add(box((0.05, 0.04, 0.46), (RX, 0.785, -0.04), laiton, 0.008, 'boite-sup'))
-rad.add(box((0.05, 0.035, 0.46), (RX, 0.465, -0.04), laiton, 0.008, 'boite-inf'))
-for s in (1, -1):
-    rad.add(box((0.05, 0.36, 0.012), (RX, 0.625, -0.04 + s * 0.225), acier_noir, 0.003, 'joue'))
-rad.add(cyl(0.018, 0.03, (RX, 0.81, -0.22), (0, 1, 0), laiton, 20, name='goulotte'))
-rad.add(cyl(0.024, 0.012, (RX, 0.828, -0.22), (0, 1, 0), noir, 24, name='bouchon'))
-rad.add(cyl(0.017, 0.05, (RX - 0.035, 0.785, -0.18), (1, 0, 0), laiton, 18, name='sortie-sup'))
-rad.add(cyl(0.017, 0.05, (RX - 0.035, 0.47, 0.13), (1, 0, 0), laiton, 18, name='sortie-inf'))
+rad.add(box((0.030, CH, CW), (RX, RY, RZ), faisceau, name='faisceau'))
+for nx in (1, -1):
+    rad.add(quad((RX + nx * 0.0152, RY, RZ), CW, CH, (nx, 0, 0), core_m, 'ailettes'))
+for zc, nm in ((ZL - 0.018, 'boite-gauche'), (ZR + 0.018, 'boite-droite')):
+    rad.add(box((0.046, CH + 0.03, 0.036), (RX, RY, zc), noir, 0.010, nm))                    # boîte plastique
+    rad.add(box((0.050, CH + 0.034, 0.006), (RX, RY, zc + (0.018 if zc > RZ else -0.018) * -1), acier, 0.001, 'sertissage'))
+for yy in (RY + CH / 2 + 0.006, RY - CH / 2 - 0.006):
+    rad.add(box((0.034, 0.012, CW), (RX, yy, RZ), acier_noir, 0.002, 'joue'))
+rad.add(cyl(0.017, 0.045, (RX - 0.035, RY + 0.10, ZL - 0.018), (1, 0, 0), noir, 18, name='entree'))   # du thermostat
+rad.add(cyl(0.017, 0.045, (RX - 0.035, RY - 0.10, ZR + 0.018), (1, 0, 0), noir, 18, name='sortie'))   # vers la pompe
+rad.add(cyl(0.004, 0.030, (RX - 0.03, RY + CH / 2 + 0.008, ZL - 0.018), (1, 0, 0), noir, 8, name='raccord-vase'))
+rad.add(cyl(0.012, 0.010, (RX - 0.028, RY - 0.06, ZR + 0.018), (1, 0, 0), noir, 18, name='bossage-thermocontact'))
+for zz in (RZ - 0.12, RZ + 0.12):    # plots caoutchouc (28, 29) dans la traverse avant
+    rad.add(cyl(0.008, 0.022, (RX, RY - CH / 2 - 0.022, zz), (0, 1, 0), caoutchouc, 14, name='plot'))
+    rad.add(cyl(0.012, 0.006, (RX, RY - CH / 2 - 0.035, zz), (0, 1, 0), caoutchouc, 16, name='plot-collerette'))
+rad.add(box((0.022, 0.006, CW + 0.08), (RX, 0.795, RZ), acier_noir, 0.002, 'barre-fixation'))         # barre (22)
+for zz in (0.17, -0.25):
+    rad.add(box((0.022, 0.03, 0.012), (RX, 0.785, zz), acier_noir, 0.002, 'patte-barre'))
 fasteners(rad, 'ecrous-radiateur', [((RX, 0.808, 0.17), (0, 1, 0)), ((RX, 0.808, -0.25), (0, 1, 0))], kind='nut', r=0.007, length=0.03, travel=0.05)
-fastener(rad, 'bouchon-vidange-radiateur', (RX, 0.445, 0.14), (0, -1, 0), kind='plug', r=0.007, length=0.015, travel=0.04)
+fastener(rad, 'bouchon-vidange-radiateur', (RX, RY - CH / 2 - 0.02, ZR + 0.018), (0, -1, 0), kind='plug', r=0.007, length=0.015, travel=0.04)
 
 fan = Part('motoventilateur', (0.3, 0.4, 0))
-FX = RX - 0.045
-fan.add(lathe([(0.15, -0.02), (0.165, -0.02), (0.165, 0.02), (0.15, 0.02)], (FX, 0.625, -0.04), (1, 0, 0), noir, 48, 'buse'))
-for k in range(4):      # buse et pales
-    a = 2 * math.pi * k / 4 + 0.4
-    fan.add(extrude(rounded_rect(0.11, 0.05, 0.02), 0.004, (FX - 0.005, 0.625 + 0.08 * math.cos(a), -0.04 + 0.08 * math.sin(a)), (1, 0.25, 0), noir, 'pale', up=(0, math.cos(a), math.sin(a))))
-    fan.add(box((0.006, 0.01, 0.15), (FX + 0.005, 0.625 + 0.08 * math.cos(a + 0.78), -0.04 + 0.08 * math.sin(a + 0.78)), acier_noir, name='bras'))
-fan.add(cyl(0.042, 0.07, (FX - 0.04, 0.625, -0.04), (1, 0, 0), acier_noir, 28, name='moteur'))
-fan.add(cyl(0.022, 0.02, (FX + 0.01, 0.625, -0.04), (1, 0, 0), noir, 20, name='moyeu'))
-fan.add(cyl(0.010, 0.03, (RX - 0.03, 0.47, 0.16), (1, 0, 0), laiton, 12, name='thermocontact'))
-fan.add(tube([(RX - 0.045, 0.47, 0.16), (1.62, 0.52, 0.22), (1.55, 0.62, 0.30)], 0.003, fil, seg=6))
+FX = RX - 0.05
+# buse (20) : virole et bras de fixation vissés sur les joues du radiateur
+fan.add(lathe([(0.150, -0.022), (0.158, -0.022), (0.158, 0.018), (0.172, 0.022), (0.172, 0.026), (0.150, 0.026)], (FX, RY, RZ), (1, 0, 0), noir, 64, 'buse'))
+for k in range(4):
+    a = 2 * math.pi * k / 4 + math.pi / 4
+    fan.add(box((0.008, 0.012, 0.15), (FX - 0.03, RY + 0.075 * math.cos(a), RZ + 0.075 * math.sin(a)), acier_noir, 0.002, 'bras-buse', axis=(0, math.cos(a + math.pi / 2), math.sin(a + math.pi / 2))))
+# moteur (19) et ventilateur (21) : 4 pales vrillées sur un moyeu
+fan.add(lathe([(0.0, -0.045), (0.036, -0.045), (0.042, -0.035), (0.042, 0.030), (0.036, 0.036), (0.0, 0.036)], (FX - 0.065, RY, RZ), (1, 0, 0), acier_noir, 32, 'moteur'))
+for k in range(6):
+    a = 2 * math.pi * k / 6
+    fan.add(box((0.05, 0.004, 0.004), (FX - 0.07, RY + 0.043 * math.cos(a), RZ + 0.043 * math.sin(a)), acier_noir, name='nervure-moteur'))
+fan.add(cyl(0.004, 0.02, (FX - 0.115, RY, RZ), (1, 0, 0), acier, 10, name='arbre'))
+fan.add(lathe([(0.0, -0.012), (0.026, -0.012), (0.028, 0.0), (0.024, 0.012), (0.0, 0.016)], (FX - 0.012, RY, RZ), (1, 0, 0), noir, 24, 'moyeu-ventilateur'))
+for k in range(4):
+    a0 = 2 * math.pi * k / 4
+    P = []
+    for i in range(7):                      # du pied (r 26 mm) au bout (r 140 mm)
+        r = 0.026 + 0.114 * i / 6
+        chord = 0.040 + 0.035 * math.sin(math.pi * i / 6)
+        pitch = math.radians(34 - 16 * i / 6)
+        row = []
+        for j in range(5):
+            t = (j / 4 - 0.5) * chord
+            a = a0 + t / r * math.cos(pitch)
+            row.append((FX - 0.012 + t * math.sin(pitch), RY + r * math.cos(a), RZ + r * math.sin(a)))
+        P.append(row)
+    blade = grid(P, noir, 'pale', smooth_angle=70)
+    solidify(blade, 0.003, 0.0)
+    fan.add(blade)
+fan.add(box((0.012, 0.006, 0.30), (FX - 0.03, RY - 0.16, RZ), acier_noir, 0.002, 'support'))          # support (23)
+fan.add(tube([(FX - 0.10, RY - 0.03, RZ - 0.03), (FX - 0.13, RY - 0.12, RZ + 0.05), (1.56, 0.53, 0.25), (1.55, 0.62, 0.30)], 0.003, fil, seg=6))
+# thermocontact (26) et joint (27) dans la boîte à eau droite (enclenchement 90,5 à 93,5 °C)
+fan.add(tube([(RX - 0.06, RY - 0.06, ZR + 0.018), (1.60, 0.55, 0.22), (1.55, 0.62, 0.30)], 0.003, fil, seg=6))
+fan.add(cyl(0.0125, 0.003, (RX - 0.034, RY - 0.06, ZR + 0.018), (1, 0, 0), M('joint-fibre', 0xb79e72, 0.0, 0.8), 18, name='joint-thermocontact'))
+fastener(fan, 'thermocontact-radiateur', (RX - 0.036, RY - 0.06, ZR + 0.018), (-1, 0, 0), kind='plug', r=0.009, length=0.03, travel=0.05)
 
 vase = Part('vase-expansion', (0, 0.45, 0.25))
 VX, VY, VZ = 1.05, 0.765, 0.465
-vase.add(lathe([(0.0, -0.075), (0.055, -0.075), (0.062, -0.06), (0.062, 0.06), (0.05, 0.075), (0.0, 0.075)], (VX, VY, VZ), (0, 1, 0), plastique, 32, 'vase'))
+vase.add(lathe([(0.0, -0.075), (0.055, -0.075), (0.062, -0.06), (0.062, 0.05), (0.05, 0.065), (0.022, 0.07), (0.022, 0.085), (0.0, 0.085)], (VX, VY, VZ), (0, 1, 0), plastique, 32, 'vase'))
 vase.add(lathe([(0.0, -0.072), (0.058, -0.072), (0.058, 0.01), (0.0, 0.01)], (VX, VY, VZ), (0, 1, 0), liquide, 32, 'niveau'))
-vase.add(cyl(0.03, 0.03, (VX, VY + 0.09, VZ), (0, 1, 0), noir, 24, name='bouchon-tare'))
-for dy in (-0.035, 0.02):
-    vase.add(box((0.004, 0.003, 0.03), (VX - 0.062, VY + dy, VZ), noir, name='repere'))   # mini / maxi
+for dy, w in ((-0.035, 0.03), (0.02, 0.03)):
+    vase.add(box((0.004, 0.003, w), (VX - 0.062, VY + dy, VZ), noir, name='repere'))   # mini / maxi
+vase.add(torus(0.021, 0.0025, (VX, VY + 0.086, VZ), (0, 1, 0), caoutchouc, 20, 6, 'joint-soupape'))        # joint (3)
+vase.add(lathe([(0.0, 0.0), (0.016, 0.0), (0.016, 0.012), (0.010, 0.016), (0.0, 0.016)], (VX, VY + 0.072, VZ), (0, 1, 0), laiton, 18, 'soupape'))   # soupape (2)
+vase.add(cyl(0.006, 0.02, (VX + 0.045, VY - 0.07, VZ), (1, 0, 0), plastique, 10, name='raccord-sortie'))
 vase.add(box((0.02, 0.12, 0.08), (VX, VY - 0.02, VZ + 0.075), acier_noir, 0.004, 'support'))
+vase.add(torus(0.064, 0.003, (VX, VY - 0.02, VZ), (0, 1, 0), acier_noir, 32, 6, 'collier-support'))
+fastener(vase, 'bouchon-vase', (VX, VY + 0.092, VZ), (0, 1, 0), kind='plug', r=0.024, length=0.022, travel=0.07)   # bouchon (1), taré 0,8 bar
+
+# thermostat (17) dans le boîtier de pompe à eau (voir moteur.py) : début d'ouverture 86 °C
+th = Part('thermostat', (0, 0.18, 0))
+TX, TY, TZ = 1.135, 0.671, -0.02
+th.add(cyl(0.021, 0.0015, (TX, TY + 0.012, TZ), (0, 1, 0), M('joint', 0x8b6b45, 0.0, 0.8), 24, name='joint-thermostat'))
+th.add(lathe([(0.008, 0.0), (0.020, 0.0), (0.020, 0.002), (0.008, 0.002)], (TX, TY + 0.010, TZ), (0, 1, 0), laiton, 24, 'bride'))
+th.add(lathe([(0.0, -0.002), (0.013, -0.002), (0.013, 0.002), (0.0, 0.002)], (TX, TY + 0.006, TZ), (0, 1, 0), laiton, 24, 'clapet'))
+th.add(lathe([(0.0, -0.022), (0.007, -0.022), (0.008, -0.004), (0.0, -0.004)], (TX, TY + 0.006, TZ), (0, 1, 0), cuivre, 18, 'capsule-cire'))
+for s in (1, -1):
+    th.add(tube([(TX + s * 0.016, TY + 0.010, TZ), (TX + s * 0.012, TY - 0.012, TZ), (TX, TY - 0.016, TZ)], 0.0015, laiton, 'etrier', seg=6))
+pts = [(TX + 0.011 * math.cos(2 * math.pi * 3.5 * i / 30), TY + 0.004 - 0.014 * i / 30, TZ + 0.011 * math.sin(2 * math.pi * 3.5 * i / 30)) for i in range(31)]
+th.add(tube(pts, 0.0011, M('ressort', 0x6d7d8a, 0.8, 0.35), 'ressort', seg=4, res=2))
+fasteners(th, 'vis-boitier-thermostat', [((TX + s * 0.024, TY + 0.03, TZ), (0, 1, 0)) for s in (1, -1)], kind='bolt', r=0.004, length=0.025, travel=0.04)
 
 dur = Part('durites', (0.15, 0.3, 0))
-dur.add(tube([(1.175, 0.690, -0.02), (1.30, 0.75, -0.10), (1.55, 0.79, -0.17), (RX - 0.06, 0.785, -0.18)], 0.019, caoutchouc, seg=14, res=10))   # thermostat → radiateur
-dur.add(tube([(RX - 0.06, 0.47, 0.13), (1.48, 0.53, 0.21), (1.25, 0.58, 0.14), (1.16, 0.58, 0.07)], 0.019, caoutchouc, seg=14, res=10))         # radiateur → pompe
-dur.add(tube([(0.76, 0.64, -0.06), (0.73, 0.72, -0.20), (TABLIER_X + 0.005, 0.79, -0.30)], 0.010, caoutchouc, seg=10))                          # chauffage (aller)
-dur.add(tube([(1.12, 0.58, 0.07), (0.95, 0.64, 0.25), (0.76, 0.74, 0.30), (TABLIER_X + 0.005, 0.79, 0.28)], 0.010, caoutchouc, seg=10, res=10))  # chauffage (retour)
-dur.add(tube([(VX, VY - 0.075, VZ), (1.20, 0.70, 0.35), (1.55, 0.80, 0.10), (RX - 0.01, 0.81, -0.20)], 0.005, caoutchouc, seg=8, res=10))       # vase → radiateur
-for p in ((1.20, 0.712, -0.045), (RX - 0.07, 0.785, -0.18), (1.17, 0.58, 0.07), (RX - 0.07, 0.47, 0.13)):
-    dur.add(torus(0.021, 0.003, p, (1, 0, 0), acier, 20, 6, 'collier'))
+up = [(1.175, 0.690, -0.02), (1.30, 0.75, -0.10), (1.50, 0.76, -0.20), (RX - 0.065, RY + 0.10, ZL - 0.018)]
+lo = [(RX - 0.065, RY - 0.10, ZR + 0.018), (1.50, 0.53, 0.20), (1.25, 0.58, 0.14), (1.16, 0.58, 0.07)]
+dur.add(tube(up, 0.019, caoutchouc, 'durite-superieure', seg=14, res=10))     # thermostat → radiateur
+dur.add(tube(lo, 0.019, caoutchouc, 'durite-inferieure', seg=14, res=10))     # radiateur → pompe
+dur.add(tube([(0.76, 0.64, -0.06), (0.73, 0.72, -0.20), (TABLIER_X + 0.005, 0.79, -0.30)], 0.010, caoutchouc, 'durite-chauffage-aller', seg=10))
+dur.add(tube([(1.12, 0.58, 0.07), (0.95, 0.64, 0.25), (0.76, 0.74, 0.30), (TABLIER_X + 0.005, 0.79, 0.28)], 0.010, caoutchouc, 'durite-chauffage-retour', seg=10, res=10))
+dur.add(tube([(VX + 0.06, VY - 0.07, VZ), (1.20, 0.72, 0.35), (1.55, 0.82, 0.10), (RX - 0.03, RY + CH / 2 + 0.008, ZL - 0.018)], 0.005, caoutchouc, 'tuyau-vase', seg=8, res=10))
+cl = []
+for p, ax in ((up[0], (1, 0.4, 0)), (up[-1], (1, 0, 0)), (lo[0], (1, 0, 0)), (lo[-1], (1, 0, 0)),
+              ((0.76, 0.645, -0.065), (0.3, 1, -0.6)), ((TABLIER_X + 0.012, 0.79, -0.30), (1, 0, 0)), ((TABLIER_X + 0.012, 0.79, 0.28), (1, 0, 0)), ((1.115, 0.582, 0.075), (1, 0, 0))):
+    r = 0.019 if p in (up[0], up[-1], lo[0], lo[-1]) else 0.010
+    dur.add(torus(r + 0.002, 0.0022, p, ax, zinc, 24, 6, 'collier'))
+    cl.append(((p[0], p[1] + r + 0.004, p[2]), (0, 1, 0)))
+fasteners(dur, 'colliers-durites', cl, kind='screw', r=0.003, length=0.012, travel=0.025)
 fasteners(dur, 'vis-purge-refroidissement', [((1.20, 0.712, -0.045), (0, 1, 0)), ((0.73, 0.735, -0.20), (0, 1, 0))], kind='screw', r=0.005, length=0.015, travel=0.012)
 
 # =====================================================================================

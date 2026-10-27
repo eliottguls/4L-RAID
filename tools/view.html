@@ -9,7 +9,7 @@
 <body>
 <!-- Outil de mise au point : tools/view.html?f=../models/moteur.glb&az=40&el=25&d=1.2&t=0.92,0.5,0
      az / el : angles de la caméra en degrés, d : distance, t : cible, xray=1 : transparence,
-     explode=1 : vue éclatée, fx=1 : vis dévissées, only=id1,id2 : pièces à afficher. -->
+     explode=1 : vue éclatée, under=1 : éclairage par-dessous, fx=1 : vis dévissées, only=id1,id2 : pièces à afficher. -->
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -26,6 +26,7 @@ scene.background = new THREE.Color(0x24211e);
 scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
 scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 0.5));
 const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(2, 4, 3); scene.add(sun);
+if (q.get('under')) { const low = new THREE.DirectionalLight(0xffffff, 1.4); low.position.set(-1, -4, 2); scene.add(low); }
 const camera = new THREE.PerspectiveCamera(+(q.get('fov') ?? 35), innerWidth / innerHeight, 0.01, 50);
 const t = (q.get('t') || '0.92,0.5,0').split(',').map(Number);
 const az = THREE.MathUtils.degToRad(+(q.get('az') ?? 40)), el = THREE.MathUtils.degToRad(+(q.get('el') ?? 25)), d = +(q.get('d') ?? 1.4);
