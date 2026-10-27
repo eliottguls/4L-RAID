@@ -297,4 +297,53 @@ for s, x0 in ((1, -1.143), (-1, -1.095)):
     fm.add(tube([(-0.88, 0.345, s * 0.06), (-0.98, 0.33, s * 0.30), (x0 + 0.05, 0.30, s * 0.47), (x0 + 0.02, 0.29, s * 0.50)], 0.004, cable, seg=6, res=10))
 fastener(fm, 'reglage-frein-main', (-0.85, 0.345, 0), (1, 0, 0), kind='nut', r=0.007, length=0.025, travel=0.03)
 
+# =====================================================================================
+# CEINTURES DE SÉCURITÉ à enrouleur : avant 3 points (enrouleur au pied milieu, renvoi en haut du
+# pied, ancrage bas sur le bas de caisse, boucle sur tige côté tunnel) ; arrière latérales 3 points.
+# Ceintures rangées (sangle le long du montant). Non décrites par la RTA : implantation estimée.
+# =====================================================================================
+ce = Part('ceintures', (0, 0.25, 0))
+sangle = M('sangle', 0x2b2c2e, 0.0, 0.9)
+plast_ce = M('plastique-ceinture', 0x26272a, 0.0, 0.6)
+
+
+def strap(p0, p1, w=0.048, normal=(0, 0, 1)):
+    d = tuple(p1[i] - p0[i] for i in range(3))
+    ln_ = math.sqrt(sum(c * c for c in d))
+    mid = tuple((p0[i] + p1[i]) / 2 for i in range(3))
+    return extrude([(-w / 2, -0.0008), (w / 2, -0.0008), (w / 2, 0.0008), (-w / 2, 0.0008)], ln_, mid, d, sangle, 'sangle', up=normal)
+
+
+ce_fx = []
+for s_ in (1, -1):
+    for xp, zw, xb, zb, yb in ((-0.215, 0.675, -0.12, 0.10, 0.60), (-0.905, 0.665, -0.70, 0.12, 0.47)):
+        z_ = s_ * zw
+        enr, ren, anc = (xp, 0.47, z_), (xp + 0.01, 1.24, z_), (xp + 0.17, FLOOR + 0.035, s_ * (zw - 0.02))
+        ce.add(box((0.07, 0.10, 0.045), enr, plast_ce, 0.01, 'enrouleur'))
+        ce.add(box((0.05, 0.06, 0.012), ren, plast_ce, 0.008, 'renvoi'))
+        ce.add(strap((ren[0], ren[1] - 0.02, z_ - s_ * 0.008), (enr[0], enr[1] + 0.05, z_ - s_ * 0.008), normal=(0, 0, 1)))
+        lg = (xp + 0.035, 0.70, z_ - s_ * 0.012)      # languette rangée au crochet du montant
+        ce.add(strap((ren[0] + 0.005, ren[1] - 0.03, z_ - s_ * 0.012), lg, normal=(0, 0, 1)))
+        ce.add(strap(lg, (anc[0], anc[1] + 0.01, anc[2] - s_ * 0.004), normal=(0, 0, 1)))
+        ce.add(box((0.03, 0.06, 0.006), lg, chrome, 0.003, 'languette'))
+        ce.add(box((0.02, 0.025, 0.012), (lg[0], lg[1] + 0.03, z_ - s_ * 0.004), plast_ce, 0.004, 'crochet'))
+        ce.add(box((0.05, 0.012, 0.03), anc, acier_noir, 0.004, 'ancrage-bas'))
+        # boucle sur tige semi-rigide côté tunnel (ou entre les places arrière)
+        bz = s_ * zb
+        ce.add(tube([(xb, FLOOR + 0.03, bz), (xb + 0.02, yb - 0.08, bz)], 0.009, plast_ce, 'tige-boucle', seg=8))
+        ce.add(box((0.05, 0.07, 0.025), (xb + 0.025, yb, bz), plast_ce, 0.008, 'boucle'))
+        ce.add(box((0.018, 0.01, 0.012), (xb + 0.025, yb + 0.03, bz), M('bouton-rouge', 0xb8302a, 0.1, 0.5), 0.003, 'bouton'))
+        ce_fx += [((enr[0], enr[1] - 0.04, z_ - s_ * 0.025), (0, 0, -s_)), ((ren[0], ren[1], z_ - s_ * 0.008), (0, 0, -s_)),
+                  ((anc[0], anc[1] + 0.008, anc[2]), (0, 1, 0)), ((xb, FLOOR + 0.012, bz), (0, 1, 0))]
+fasteners(ce, 'vis-ceintures', ce_fx, r=0.009, length=0.025, travel=0.04)
+
+# contacteur antivol (St, A, G, M, D) : barillet et clé ; commodos (Avercod à gauche, Covir à droite)
+vo.add(cyl(0.013, 0.014, (0.468, 0.982, DRIVER_Z + 0.06), (-1, 0.15, 0), chrome, 20, name='barillet'))
+vo.add(box((0.03, 0.012, 0.0025), (0.449, 0.985, DRIVER_Z + 0.06), M('cle', 0xc9c4ae, 0.85, 0.3), 0.001, 'cle'))
+vo.add(box((0.022, 0.026, 0.006), (0.428, 0.988, DRIVER_Z + 0.06), noir, 0.005, 'tete-cle'))
+for k, sgn in enumerate((-1, 1)):
+    tip = (0.462, 0.99 - k * 0.02, DRIVER_Z + sgn * 0.17)
+    vo.add(cyl(0.008, 0.035, tip, (0.1, 0, sgn), noir, 14, name='embout-commodo'))
+    vo.add(box((0.03, 0.04, 0.035), (0.50, 0.985 - k * 0.02, DRIVER_Z + sgn * 0.035), planche_f, 0.006, 'boitier-commodo'))
+
 export(OUT)
