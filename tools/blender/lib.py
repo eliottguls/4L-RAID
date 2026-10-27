@@ -619,3 +619,107 @@ def uv_box(o, scale=1.0):
     bm.to_mesh(o.data)
     bm.free()
     return o
+
+
+# ---------------------------------------------------------------- mécanique : pignons, roulements
+def toothed(teeth, r_pitch, width, pos=(0, 0, 0), axis=(1, 0, 0), mat=None, hole=0.0, helix=0.0, taper=1.0,
+            depth=None, name='pignon', phase=0.0):
+    """Pignon taillé construit directement en maillage (sans booléen) : `teeth` dents sur le
+    rayon primitif `r_pitch`, alésage `hole`. helix : angle d'hélice (rad) des dentures
+    hélicoïdales ; taper : rapport des rayons face arrière / face avant (pignons coniques,
+    couronne). La face avant (taper 1) est du côté -axis."""
+    m = 2 * r_pitch / teeth
+    tip, root = r_pitch + (depth or m) * 0.9, r_pitch - (depth or m) * 1.1
+    prof = []
+    for i in range(teeth):
+        for f, rr in ((0.0, root), (0.14, root), (0.34, tip), (0.62, tip), (0.82, root)):
+            prof.append((2 * math.pi * (i + f) / teeth + phase, rr))
+    twist = width * math.tan(helix) / r_pitch if helix else 0.0
+    bm = bmesh.new()
+    n = len(prof)
+    rings = []
+    for z, sc, tw in ((-width / 2, 1.0, 0.0), (width / 2, taper, twist)):
+        outer = [bm.verts.new((r * sc * math.cos(a + tw), r * sc * math.sin(a + tw), z)) for a, r in prof]
+        if hole:
+            inner = [bm.verts.new((hole * math.cos(a + tw), hole * math.sin(a + tw), z)) for a, _ in prof]
+        else:
+            inner = [bm.verts.new((0, 0, z))]
+        rings.append((outer, inner))
+    for k, (outer, inner) in enumerate(rings):
+        for i in range(n):
+            j = (i + 1) % n
+            if hole:
+                q = (outer[i], outer[j], inner[j], inner[i])
+            else:
+                q = (outer[i], outer[j], inner[0])
+            bm.faces.new(q if k else q[::-1])
+    (o0, i0), (o1, i1) = rings
+    for i in range(n):
+        j = (i + 1) % n
+        bm.faces.new((o0[i], o0[j], o1[j], o1[i]))
+        if hole:
+            bm.faces.new((i0[j], i0[i], i1[i], i1[j]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    o = _obj_from_bm(bm, name, mat)
+    smooth(o, 30)
+    return place(o, pos, axis=axis)
+
+
+def sphere(r, pos=(0, 0, 0), mat=None, seg=10, rings=6, name='bille'):
+    bm = bmesh.new()
+    bmesh.ops.create_uvsphere(bm, u_segments=seg, v_segments=rings, radius=r)
+    o = _obj_from_bm(bm, name, mat)
+    smooth(o, 80)
+    return place(o, pos)
+
+
+def ball_bearing(r_in, r_out, width, pos, axis, race_mat, ball_mat=None, balls=None, seg=32):
+    """Roulement à billes : bagues intérieure et extérieure, billes visibles entre les deux."""
+    rb = (r_out - r_in) * 0.28
+    rm = (r_in + r_out) / 2
+    w = width / 2
+    out = [lathe([(r_in, -w), (rm - rb * 0.7, -w), (rm - rb * 0.7, w), (r_in, w)], pos, axis, race_mat, seg, 'bague-int'),
+           lathe([(rm + rb * 0.7, -w), (r_out, -w), (r_out, w), (rm + rb * 0.7, w)], pos, axis, race_mat, seg, 'bague-ext')]
+    a = Vector(axis).normalized()
+    u = a.cross(Vector((0, 0, 1)) if abs(a.z) < 0.9 else Vector((1, 0, 0))).normalized()
+    v = a.cross(u)
+    nb = balls or max(7, int(2 * math.pi * rm / (rb * 2.6)))
+    for k in range(nb):
+        t = 2 * math.pi * k / nb
+        p = Vector(pos) + (u * math.cos(t) + v * math.sin(t)) * rm
+        out.append(sphere(rb, tuple(p), ball_mat or race_mat, 8, 5))
+    return out
+
+
+def roller_bearing(r_in, r_out, width, pos, axis, race_mat, roller_mat=None, cone=0.25, rollers=None, seg=32):
+    """Roulement à rouleaux coniques : cône (bague intérieure), cuvette et rouleaux inclinés.
+    La grande base des rouleaux est du côté +axis."""
+    w = width / 2
+    rm = (r_in + r_out) / 2
+    rr = (r_out - r_in) * 0.24
+    dr = width * math.tan(cone) / 2
+    out = [lathe([(r_in, -w), (rm - rr - dr, -w), (rm - rr + dr, w * 0.8), (r_in, w)], pos, axis, race_mat, seg, 'cone'),
+           lathe([(rm + rr - dr, -w), (r_out, -w), (r_out, w), (rm + rr + dr, w)], pos, axis, race_mat, seg, 'cuvette')]
+    a = Vector(axis).normalized()
+    u = a.cross(Vector((0, 0, 1)) if abs(a.z) < 0.9 else Vector((1, 0, 0))).normalized()
+    v = a.cross(u)
+    nr = rollers or max(9, int(2 * math.pi * rm / (rr * 2.4)))
+    for k in range(nr):
+        t = 2 * math.pi * k / nr
+        rad = u * math.cos(t) + v * math.sin(t)
+        p0 = Vector(pos) + rad * (rm - dr) - a * w * 0.85
+        p1 = Vector(pos) + rad * (rm + dr) + a * w * 0.85
+        c = cyl(rr * 0.8, (p1 - p0).length, tuple((p0 + p1) / 2), tuple(p1 - p0), roller_mat or race_mat, 8, r2=rr)
+        out.append(c)
+    return out
+
+
+def splined(r, length, pos, axis, mat, splines=18, name='cannelures'):
+    """Portée cannelée (arbre ou moyeu)."""
+    return toothed(splines, r, length, pos, axis, mat, depth=r * 0.12, name=name)
+
+
+def circlip(r, pos, axis, mat, t=0.0012, name='circlip'):
+    """Anneau élastique ouvert, avec ses deux oreilles."""
+    o = lathe([(r, -t / 2), (r + t * 1.6, -t / 2), (r + t * 1.6, t / 2), (r, t / 2)], pos, axis, mat, 24, name, angle=math.radians(330))
+    return o

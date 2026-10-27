@@ -12,7 +12,8 @@ const systemOf = (id) => SYSTEMS.find((s) => s.id === PARTS[id]?.system);
 const procById = (id) => PROCEDURES.find((p) => p.id === id);
 const BODY_PARTS = ['caisse', 'capot', 'portes', 'hayon', 'vitrage', 'pare-chocs', 'calandre'];
 const DIFFICULTY = ['', 'Facile', 'Moyen', 'Atelier'];
-const INNER_PARTS = new Set(['chemises-pistons', 'bielles', 'vilebrequin', 'arbre-cames', 'culbuterie', 'soupapes', 'joint-culasse', 'chaine-distribution', 'pompe-huile', 'volant-moteur', 'embrayage']);
+const INNER_PARTS = new Set(['chemises-pistons', 'bielles', 'vilebrequin', 'arbre-cames', 'culbuterie', 'soupapes', 'joint-culasse', 'chaine-distribution', 'pompe-huile', 'volant-moteur', 'embrayage',
+  'disque-embrayage', 'butee-embrayage', 'arbre-primaire', 'arbre-secondaire', 'differentiel', 'marche-arriere', 'fourchettes']);
 
 // Procédures liées à chaque pièce
 const procsForPart = {};
@@ -153,7 +154,12 @@ function applyVisualState() {
     const sys = PARTS[id]?.system;
     g.visible = !state.hidden.has(sys);
     const off = g.userData.explode.clone().multiplyScalar(state.explode);
-    if (removed.has(id)) off.add(g.userData.explode.clone().multiplyScalar(1.8)).add(new THREE.Vector3(0, 0.08, 0));
+    if (removed.has(id)) {
+      // une pièce déposée avec son ensemble (pignons avec la boîte, soupapes avec la culasse) suit l'ensemble
+      const lead = PARTS[id]?.with;
+      const ex = (lead && removed.has(lead) && parts.get(lead)?.[0]?.userData.explode) || g.userData.explode;
+      off.add(ex.clone().multiplyScalar(1.8)).add(new THREE.Vector3(0, 0.08, 0));
+    }
     g.userData.targetOffset = off;
 
     let opacity = 1;

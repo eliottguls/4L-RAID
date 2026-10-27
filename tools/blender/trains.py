@@ -1,19 +1,19 @@
-# Boîte-pont, transmissions, trains avant et arrière, direction et freins de la Renault 4 GTL,
-# modélisés d'après la RTA. Lancer : python3 tools/blender/trains.py   →   models/trains.glb
+# Trains avant et arrière, direction et freins de la Renault 4 GTL, modélisés d'après la RTA
+# (boîte-pont, embrayage et transmissions : voir transmission.py).
+# Lancer : python3 tools/blender/trains.py   →   models/trains.glb
 #
 # Cotes de la RTA (pages du PDF) : voies 1 280 / 1 248 mm, empattement droit 2 449 / gauche 2 401 mm,
 # pneus 145 SR 13, jante 400 B 13 (p.82) ; disques Ø 228 × 10 mm, étrier DBA ou Girling Ø 45 (p.83) ;
 # tambours arrière Ø 180 mm, cylindres Ø 20,6 (p.67) ; barres de torsion avant longitudinales,
-# arrière transversales (planches 18 et 19, p.54 et 65) ; transmissions à joints tripode GI 62 côté
-# boîte et GE 76 côté roue (p.50) ; carter de boîte-différentiel (planche 13, p.42) ; biellettes de
-# direction horizontales, parallèles à l'axe du bras supérieur (p.52).
+# arrière transversales (planches 18 et 19, p.54 et 65) ; biellettes de direction
+# horizontales, parallèles à l'axe du bras supérieur (p.52).
 # Les formes non cotées (bras, carters) sont reprises des vues éclatées.
 import math
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib import M, Part, box, cyl, export, extrude, fastener, fasteners, lathe, reset, torus, tube  # noqa: E402
+from lib import M, Part, box, cyl, export, extrude, fastener, fasteners, lathe, reset, tube  # noqa: E402
 
 reset()
 
@@ -21,7 +21,6 @@ AXLE_F = 1.306
 AXLE_R = {1: -1.143, -1: -1.095}     # empattement droit / gauche (barres arrière décalées)
 PIVOT_R = {1: -0.70, -1: -0.65}      # tubes d'articulation des bras arrière
 WR = 0.285
-DIFF_Y = 0.32
 
 alu = M('alu-coule', 0xb9bcba, 0.55, 0.5)
 acier = M('acier', 0x9ca3a8, 0.85, 0.3)
@@ -36,52 +35,6 @@ disque_m = M('disque', 0x8d9399, 0.9, 0.35)
 fonte_frein = M('fonte-frein', 0x5c6166, 0.6, 0.55)
 garniture = M('garniture', 0x6f5a4c, 0.0, 0.9)
 cuivre = M('cuivre', 0xb87333, 0.9, 0.3)
-
-# =====================================================================================
-# BOÎTE-PONT (planche 13) : carter en deux demi-carters, différentiel, couvercles
-# =====================================================================================
-bt = Part('boite', (0.75, 0.15, 0))
-XB0, XB1 = 1.235, 1.545
-# demi-carters : profil (z, y) extrudé le long de x, plan de joint vertical au milieu
-gprof = [(-0.115, -0.07), (0.115, -0.07), (0.125, 0.0), (0.12, 0.08), (0.09, 0.115), (-0.09, 0.115), (-0.12, 0.08), (-0.125, 0.0)]
-bt.add(extrude(gprof, XB1 - XB0, ((XB0 + XB1) / 2, 0.43, 0), (1, 0, 0), alu, bev=0.02, up=(0, 1, 0)))
-bt.add(box((XB1 - XB0 - 0.02, 0.012, 0.012), ((XB0 + XB1) / 2, 0.545, 0.0), alu, bev=0.004))   # nervure de joint
-for k in range(5):
-    x = XB0 + 0.04 + k * 0.06
-    for s in (1, -1):
-        bt.add(box((0.01, 0.12, 0.012), (x, 0.43, s * 0.124), alu, bev=0.003))
-# carter de différentiel autour de l'axe des roues, écrous de réglage de chaque côté (repère 6)
-bt.add(cyl(0.115, 0.30, (AXLE_F, DIFF_Y + 0.02, 0), (0, 0, 1), alu, 48))
-for s in (1, -1):
-    bt.add(cyl(0.06, 0.03, (AXLE_F, DIFF_Y, s * 0.165), (0, 0, 1), acier_noir, 12))
-    bt.add(cyl(0.035, 0.012, (AXLE_F, DIFF_Y, s * 0.185), (0, 0, 1), caoutchouc, 24))   # joint à lèvre
-    bt.add(box((0.015, 0.03, 0.006), (AXLE_F + 0.05, DIFF_Y + 0.04, s * 0.152), acier, bev=0.002))   # arrêtoir
-# couvercle supérieur (repère 1) et couvercle avant
-bt.add(box((0.22, 0.012, 0.16), (1.40, 0.552, 0), alu, bev=0.004))
-bt.add(extrude([(-0.09, -0.08), (0.09, -0.08), (0.10, 0.06), (0.06, 0.10), (-0.06, 0.10), (-0.10, 0.06)], 0.03, (XB1 + 0.012, 0.44, 0), (1, 0, 0), alu, bev=0.01, up=(0, 1, 0)))
-bt.add(box((0.012, 0.04, 0.05), (XB1 + 0.03, 0.48, 0.05), M('plaque-alu', 0xd8dadb, 0.6, 0.4)))   # plaque d'identification
-# tampon avant et support (planche 4)
-bt.add(cyl(0.03, 0.05, (XB1 + 0.06, 0.40, 0), (1, 0, 0), caoutchouc, 24))
-bt.add(box((0.03, 0.08, 0.14), (XB1 + 0.095, 0.40, 0), acier_noir, bev=0.004))
-# commande des vitesses : renvoi sur le couvercle avant
-bt.add(cyl(0.01, 0.06, (XB1 + 0.04, 0.53, 0), (1, 0, 0), acier, 14))
-bt.add(box((0.012, 0.05, 0.012), (XB1 + 0.07, 0.55, 0), acier, bev=0.003))
-fasteners(bt, 'bouchons-boite', [((AXLE_F + 0.05, DIFF_Y - 0.11, 0), (0, -1, 0)), ((1.42, 0.40, 0.128), (0, 0, 1))], kind='plug', r=0.010, length=0.02, travel=0.06)
-fasteners(bt, 'vis-couvercle-boite', [((XB1 + 0.028, 0.44 + dy, dz), (1, 0, 0)) for dy, dz in ((0.07, 0.07), (-0.06, 0.08), (0.07, -0.07), (-0.06, -0.08), (0.09, 0.0))], r=0.006, length=0.03, travel=0.05)
-fasteners(bt, 'vis-couvercle-sup-boite', [((x, 0.559, z), (0, 1, 0)) for x in (1.30, 1.40, 1.50) for z in (0.07, -0.07)], r=0.005, length=0.02, travel=0.04)
-
-# =====================================================================================
-# TRANSMISSIONS (joints tripode GI 62 côté boîte, GE 76 côté roue)
-# =====================================================================================
-tr = Part('transmissions', (0, -0.35, 0))
-for s in (1, -1):
-    zi, zo = s * 0.215, s * 0.505
-    tr.add(lathe([(0.0, 0.0), (0.04, 0.0), (0.042, 0.02), (0.042, 0.05), (0.035, 0.056), (0.012, 0.058), (0.0, 0.058)], (AXLE_F, DIFF_Y, s * 0.19), (0, 0, s), acier, 32))   # tulipe
-    tr.add(lathe([(0.035, 0.0), (0.04, 0.008), (0.03, 0.02), (0.038, 0.032), (0.026, 0.045), (0.032, 0.056), (0.016, 0.075), (0.013, 0.085)], (AXLE_F, DIFF_Y, s * 0.24), (0, 0, s), caoutchouc, 24))
-    tr.add(tube([(AXLE_F, DIFF_Y, s * 0.25), (AXLE_F, WR, zo - s * 0.05)], 0.0125, acier, seg=12))
-    tr.add(lathe([(0.013, 0.0), (0.03, 0.012), (0.04, 0.03), (0.032, 0.04), (0.042, 0.055), (0.045, 0.07)], (AXLE_F, WR + (DIFF_Y - WR) * 0.12, zo - s * 0.08), (0, 0, s), caoutchouc, 24))
-    tr.add(lathe([(0.0, 0.0), (0.048, 0.0), (0.05, 0.02), (0.04, 0.045), (0.02, 0.05), (0.0, 0.05)], (AXLE_F, WR, zo - s * 0.01), (0, 0, s), acier, 32))   # bol de fusée
-    tr.add(cyl(0.0125, 0.07, (AXLE_F, WR, zo + s * 0.065), (0, 0, s), acier, 16))   # fusée cannelée
 
 # =====================================================================================
 # TRAIN AVANT (planche 18) : bras inférieur, bras supérieur, porte-fusée, moyeu, disque

@@ -8,6 +8,11 @@
 #   hauteur de culasse 72 mm, tiges de culbuteurs 173 × Ø 5 mm, poussoirs Ø 19 mm, soupapes
 #   têtes Ø 33,5 / 30,5 mm, queues Ø 7 mm, ressorts fil 3,4 mm, Ø int. 21,6 mm, longueur libre 42 mm (p.20) ;
 #   arbre à cames latéral à 4 paliers Ø 38 mm, chaîne simple et tendeur (p.21) ; volant fixé par 7 vis (p.21).
+#   Sièges de soupapes rapportés Ø ext. 34,5 / 31,3 mm, guides Ø 7 × 11 mm (p.20) ; segments de 2, 2 et
+#   3,5 mm, flasques de butée de 2,80 à 2,95 mm de part et d'autre du palier central, joint à lèvres
+#   80 × 100 × 13 côté volant, joint d'arbre à cames 30 × 42 × 8 (p.21) ; pompe à huile à pignons
+#   avec clapet de décharge à bille et crépine (planche 10, p.37) ; volant centré par 3 goupilles
+#   dépassant de 7 mm (p.40) ; pignon de commande d'allumeur, gros déport côté embrayage (p.36).
 #   Vues éclatées : culasse (planche 5, p.32), carter-cylindres (planche 6, p.33),
 #   équipage mobile (planche 7, p.34), distribution (planche 8, p.35), échappement (planche 9, p.36),
 #   graissage (planche 10, p.37), refroidissement (planche 11, p.38), compartiment moteur (photo p.6).
@@ -24,7 +29,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import (M, Part, apply_all, bevel, boolean, box, cyl, delete, export, extrude, fastener,  # noqa: E402
-                 fasteners, gear, hexagon, join, lathe, place, reset, rounded_rect, torus, tube)
+                 fasteners, gear, hexagon, join, lathe, place, reset, rounded_rect, sphere, toothed, torus, tube)
 
 reset()
 
@@ -46,6 +51,7 @@ fonte_usinee = M('fonte-usinee', 0x9aa1a6, 0.7, 0.35)
 alu = M('alu-coule', 0xb9bcba, 0.55, 0.5)
 alu_usine = M('alu-usine', 0xd2d5d6, 0.8, 0.25)
 acier = M('acier', 0x9ca3a8, 0.85, 0.3)
+acier_taille = M('acier-taille', 0xb7bcc0, 0.95, 0.22)
 acier_noir = M('acier-noirci', 0x3c3f42, 0.7, 0.45)
 tole = M('tole-noire', 0x2d3033, 0.5, 0.5)
 rouge = M('peinture-rouge', 0x93302a, 0.3, 0.35)
@@ -92,7 +98,7 @@ for x in [XF - 0.005, X(0) - PITCH / 2, X(1) - PITCH / 2, X(2) - PITCH / 2, XR +
 bloc.add(cyl(0.026, XF - XR - 0.01, (EX, CAM_Y, CAM_Z + 0.022), (1, 0, 0), fonte, 28))
 bloc.add(box((XF - XR - 0.02, 0.06, 0.03), (EX, CAM_Y + 0.035, CAM_Z + 0.03), fonte, bev=0.005))
 # Bossage d'allumeur / pompe à huile (arrière droit), de filtre et de pompe à essence
-bloc.add(cyl(0.022, 0.05, (EX - 0.13, CAM_Y + 0.07, CAM_Z + 0.045), (0, 1, 0), fonte, 24))
+bloc.add(cyl(0.022, 0.05, (EX - 0.13, CAM_Y + 0.07, CAM_Z + 0.032), (0, 1, 0), fonte, 24))
 bloc.add(cyl(0.038, 0.03, (EX - 0.075, YC + 0.035, 0.112), (0, 0, 1), fonte, 32))   # portée de filtre
 bloc.add(cyl(0.030, 0.012, (EX - 0.075, YC + 0.035, 0.128), (0, 0, 1), fonte_usinee, 32))
 bloc.add(box((0.06, 0.05, 0.02), (EX + 0.03, CAM_Y - 0.02, 0.112), fonte, bev=0.004))     # pompe à essence
@@ -110,6 +116,9 @@ for s in (1, -1):
 # Manocontact de pression d'huile côté gauche (p.37)
 bloc.add(extrude(hexagon(0.011), 0.01, (EX - 0.10, CAM_Y - 0.02, -0.112), (0, 0, -1), acier))
 bloc.add(cyl(0.010, 0.022, (EX - 0.10, CAM_Y - 0.02, -0.128), (0, 0, -1), noir, 16))
+bloc.add(lathe([(0.040, -0.0065), (0.050, -0.0065), (0.050, 0.0065), (0.046, 0.0065), (0.041, 0.002), (0.040, 0.002)],
+              (XF - 0.004, YC, 0), (1, 0, 0), caoutchouc, 40, 'joint-vilebrequin'))   # 80 × 100 × 13
+bloc.add(lathe([(0.015, -0.004), (0.021, -0.004), (0.021, 0.004), (0.015, 0.004)], (XF - 0.004, CAM_Y, CAM_Z), (1, 0, 0), caoutchouc, 24, 'joint-aac'))   # 30 × 42 × 8
 fastener(bloc, 'bouchon-vidange-bloc', (EX + 0.03, YC + 0.045, -0.106), (0, 0, -1), kind='plug', r=0.008, length=0.02, travel=0.05)
 # Vis d'assemblage boîte / moteur autour de la face avant
 fix_b = []
@@ -194,12 +203,15 @@ for x in journals:
         pal.append(((x, YC - 0.032, s * 0.045), (0, -1, 0)))
     vil.add(box((0.022, 0.03, 0.115), (x, YC - 0.02, 0), fonte, bev=0.004))
 fasteners(vil, 'vis-paliers', pal, r=0.0085, length=0.06, travel=0.08)
+for dx in (-0.0125, 0.0125):   # demi-flasques de butée (jeu latéral) du palier central
+    vil.add(lathe([(0.029, -0.0014), (0.042, -0.0014), (0.042, 0.0014), (0.029, 0.0014)], (EX + dx, YC, 0), (1, 0, 0), bronze, 32, 'flasque-butee', angle=math.pi))
+vil.add(lathe([(0.0105, 0.0), (0.016, 0.0), (0.016, 0.022), (0.0105, 0.022)], (XF - 0.012, YC, 0), (1, 0, 0), bronze, 24, 'douille'))   # bague de centrage d'arbre primaire
 
 # =====================================================================================
 # VOLANT MOTEUR (7 vis) et COURONNE
 # =====================================================================================
 vol = Part('volant-moteur', (0.3, 0, 0))
-vol.add(lathe([(0.012, 0), (0.12, 0), (0.125, 0.004), (0.125, 0.026), (0.10, 0.028), (0.06, 0.018), (0.012, 0.018)],
+vol.add(lathe([(0.012, 0), (0.12, 0), (0.125, 0.004), (0.125, 0.034), (0.098, 0.034), (0.095, 0.026), (0.06, 0.026), (0.05, 0.018), (0.012, 0.018)],
               (XF + 0.010, YC, 0), (1, 0, 0), fonte_usinee, 64))
 vol.add(gear(0.127, 0.132, 96, 0.012, (XF + 0.03, YC, 0), (1, 0, 0), acier, 'couronne', hole=0.124))
 vf = []
@@ -207,27 +219,10 @@ for k in range(7):
     a = 2 * math.pi * k / 7
     vf.append(((XF + 0.029, YC + 0.024 * math.cos(a), 0.024 * math.sin(a)), (1, 0, 0)))
 fasteners(vol, 'vis-volant', vf, r=0.0055, length=0.025, travel=0.05)
-
-# =====================================================================================
-# EMBRAYAGE (disque, mécanisme à diaphragme, butée)
-# =====================================================================================
-emb = Part('embrayage', (0.5, 0.0, 0))
-XE = XF + 0.036
-emb.add(lathe([(0.03, -0.0035), (0.0905, -0.0035), (0.0905, 0.0035), (0.03, 0.0035)], (XE + 0.004, YC, 0), (1, 0, 0), garniture, 48))
-emb.add(lathe([(0.012, -0.012), (0.03, -0.012), (0.03, 0.012), (0.012, 0.012)], (XE + 0.004, YC, 0), (1, 0, 0), acier, 24))   # moyeu
-emb.add(lathe([(0.105, 0.0), (0.112, 0.0), (0.112, 0.004), (0.101, 0.004), (0.101, 0.026), (0.04, 0.034), (0.036, 0.03), (0.097, 0.022), (0.097, 0.008)],
-              (XE + 0.007, YC, 0), (1, 0, 0), acier, 48))
-for k in range(18):  # doigts du diaphragme
-    a = 2 * math.pi * k / 18
-    emb.add(box((0.002, 0.004, 0.045), (XE + 0.034, YC + 0.06 * math.cos(a), 0.06 * math.sin(a)), acier, axis=None))
-emb.add(lathe([(0.016, 0), (0.033, 0), (0.033, 0.02), (0.016, 0.02)], (XE + 0.04, YC, 0), (1, 0, 0), acier_noir, 32))   # butée
-vm = []
-for k in range(6):
-    a = 2 * math.pi * k / 6 + math.pi / 6
-    vm.append(((XE + 0.012, YC + 0.106 * math.cos(a), 0.106 * math.sin(a)), (1, 0, 0)))
-fasteners(emb, 'vis-mecanisme', vm, r=0.006, length=0.02, travel=0.05)
-emb.add(tube([(1.26, 0.52, 0.12), (1.18, 0.64, 0.28), (0.98, 0.80, 0.28), (0.86, 0.80, 0.0), (0.84, 0.70, -0.40)], 0.004, noir, seg=8))   # câble
-fasteners(emb, 'reglage-embrayage', [((1.27, 0.52, 0.12), (1, 0.3, 0.3)), ((1.285, 0.525, 0.125), (1, 0.3, 0.3))], kind='nut', r=0.007, length=0.015, travel=0.02)
+for k in range(3):
+    a = 2 * math.pi * k / 3 + math.pi / 2
+    vol.add(cyl(0.004, 0.014, (XF + 0.044, YC + 0.110 * math.cos(a), 0.110 * math.sin(a)), (1, 0, 0), acier, 10))
+vol.add(lathe([(0.06, 0.0), (0.094, 0.0), (0.094, 0.0012), (0.06, 0.0012)], (XF + 0.0367, YC, 0), (1, 0, 0), fonte_usinee, 64, 'face-friction'))
 
 # =====================================================================================
 # ARBRE À CAMES (4 paliers Ø 38) et POUSSOIRS
@@ -248,7 +243,7 @@ for n, (x, adm) in enumerate(VALVES):
         prof.append(((0.017 + 0.0065 * max(0.0, math.cos(a)) ** 2) * math.sin(a), (0.017 + 0.0065 * max(0.0, math.cos(a)) ** 2) * math.cos(a)))
     lobe = extrude(prof, 0.012, (x, CAM_Y, CAM_Z), (1, 0, 0), fonte_usinee, up=(0, math.cos(n * 1.3), math.sin(n * 1.3)))
     aac.add(lobe)
-aac.add(gear(0.010, 0.012, 14, 0.014, (EX - 0.13, CAM_Y, CAM_Z), (1, 0, 0), acier, 'pignon-allumeur'))
+aac.add(toothed(13, 0.016, 0.014, (EX - 0.13, CAM_Y, CAM_Z), (1, 0, 0), acier, helix=math.radians(45), depth=0.0018, name='pignon-allumeur'))
 aac.add(box((0.006, 0.03, 0.05), (XR - 0.004, CAM_Y, CAM_Z), acier_noir, bev=0.003))   # bride de butée
 fasteners(aac, 'vis-bride-aac', [((XR - 0.008, CAM_Y + 0.017, CAM_Z), (-1, 0, 0)), ((XR - 0.008, CAM_Y - 0.017, CAM_Z), (-1, 0, 0))], r=0.005, length=0.015, travel=0.04)
 # poulie d'arbre à cames côté embrayage (courroie de pompe à eau et d'alternateur)
@@ -256,9 +251,10 @@ aac.add(lathe([(0.012, -0.009), (0.05, -0.009), (0.05, -0.006), (0.044, 0.0), (0
 
 culb = Part('culbuterie', (0, 0.7, 0.05))
 # poussoirs Ø 19 au-dessus de l'arbre à cames, tiges 173 × Ø 5 jusqu'aux culbuteurs
-ROCK_Y = YH + 0.044
+ROCK_Y = YH + 0.050
 ROCK_Z = 0.010
 VALVE_Z = -0.008
+CH_D = 0.009          # profondeur des chambres « baignoire » (volume 33,3 cm³, p.20)
 PUSH_Z_TOP = 0.040
 rockers_adj = []
 for n, (x, adm) in enumerate(VALVES):
@@ -268,14 +264,17 @@ for n, (x, adm) in enumerate(VALVES):
     topp = (x, ROCK_Y - 0.006, PUSH_Z_TOP)
     culb.add(tube([bottom, topp], 0.0025, acier, seg=6))
     # culbuteur : bras de la soupape (patin) jusqu'à la vis de réglage au-dessus de la tige
-    zlen = PUSH_Z_TOP - VALVE_Z + 0.014
-    culb.add(box((0.011, 0.011, zlen), (x, ROCK_Y + 0.001, (PUSH_Z_TOP + VALVE_Z) / 2), acier, bev=0.003))
-    culb.add(box((0.011, 0.008, 0.012), (x, ROCK_Y - 0.006, VALVE_Z), acier, bev=0.003))   # patin sur la queue de soupape
-    culb.add(cyl(0.0085, 0.013, (x, ROCK_Y, ROCK_Z), (1, 0, 0), acier, 20))
+    # profil (z, y) relatif à l'axe : bossage d'axe, bras de vis de réglage, bras de patin
+    arm = [(PUSH_Z_TOP - ROCK_Z + 0.007, 0.004), (PUSH_Z_TOP - ROCK_Z + 0.007, 0.0115), (0.006, 0.011), (-0.005, 0.0105),
+           (VALVE_Z - ROCK_Z - 0.002, 0.004), (VALVE_Z - ROCK_Z - 0.007, -0.002), (VALVE_Z - ROCK_Z - 0.004, -0.0085),
+           (VALVE_Z - ROCK_Z + 0.004, -0.006), (-0.006, -0.009), (0.006, -0.0095), (PUSH_Z_TOP - ROCK_Z - 0.006, -0.002)]
+    culb.add(extrude(arm, 0.010, (x, ROCK_Y, ROCK_Z), (1, 0, 0), acier, bev=0.0015, up=(0, 1, 0)))
+    culb.add(cyl(0.0088, 0.013, (x, ROCK_Y, ROCK_Z), (1, 0, 0), acier, 20))
+    culb.add(cyl(0.0035, 0.004, (x, ROCK_Y - 0.0095, VALVE_Z), (0, 1, 0), acier_noir, 10))   # patin trempé
     rockers_adj.append(((x, ROCK_Y + 0.006, PUSH_Z_TOP), (0, 1, 0)))
 culb.add(cyl(0.0095, XF - XR - 0.02, (EX, ROCK_Y, ROCK_Z), (1, 0, 0), fonte_usinee, 20))   # axe de culbuteurs
 for x in (XF - 0.02, X(0) - PITCH / 2, EX, X(2) - PITCH / 2, XR + 0.02):   # paliers d'axe
-    culb.add(box((0.016, 0.044, 0.03), (x, YH + 0.022, ROCK_Z), fonte, bev=0.003))
+    culb.add(box((0.016, 0.05, 0.03), (x, YH + 0.025, ROCK_Z), fonte, bev=0.003))
 for x in [X(i) - PITCH / 2 + 0.005 for i in range(3)] + [X(i) + PITCH / 2 - 0.005 for i in range(3)]:   # ressorts d'écartement
     culb.add(cyl(0.0075, 0.012, (x, ROCK_Y, ROCK_Z), (1, 0, 0), acier_noir, 12))
 fasteners(culb, 'vis-reglage-culbuteurs', rockers_adj, kind='nut', r=0.0055, length=0.022, travel=0.015)
@@ -284,19 +283,25 @@ fasteners(culb, 'vis-reglage-culbuteurs', rockers_adj, kind='nut', r=0.0055, len
 # SOUPAPES ET RESSORTS
 # =====================================================================================
 soup = Part('soupapes', (0, 0.95, 0))
+SEATS = []   # sièges rapportés, posés avec la culasse
 for x, adm in VALVES:
     rh = 0.0335 / 2 if adm else 0.0305 / 2
-    seat = YD + 0.0015 + 0.004
-    soup.add(lathe([(0, 0), (rh, 0), (rh, 0.0015), (0.0045, 0.010), (0.0035, 0.014), (0.0035, 0.106), (0, 0.106)],
+    seat = YD + 0.0015 + CH_D   # plafond de la chambre de combustion
+    soup.add(lathe([(0, 0), (rh, 0), (rh, 0.0015), (0.0045, 0.010), (0.0035, 0.014), (0.0035, 0.1015), (0, 0.1015)],
                    (x, seat, VALVE_Z), (0, 1, 0), acier, 24))
     # ressort : hélice
     pts = []
-    turns, h0, h1 = 6.5, YH + 0.002, YH + 0.036
+    turns, h0, h1 = 6.0, YH + 0.002, YH + 0.030
     for k in range(int(turns * 12) + 1):
         a = 2 * math.pi * k / 12
         pts.append((x + 0.0125 * math.cos(a), h0 + (h1 - h0) * k / (turns * 12), VALVE_Z + 0.0125 * math.sin(a)))
     soup.add(tube(pts, 0.0017, acier_noir, seg=6, res=2))
     soup.add(lathe([(0.0035, 0), (0.0145, 0), (0.0145, 0.003), (0.006, 0.005), (0.0035, 0.005)], (x, h1, VALVE_Z), (0, 1, 0), acier, 20))   # coupelle
+    soup.add(lathe([(0.0055, 0), (0.0145, 0), (0.0145, 0.0015), (0.0055, 0.0015)], (x, h0 - 0.0015, VALVE_Z), (0, 1, 0), acier_noir, 20))   # coupelle inférieure
+    soup.add(lathe([(0.0036, 0.0), (0.0062, 0.0), (0.0052, 0.008), (0.0036, 0.007)], (x, h1, VALVE_Z), (0, 1, 0), acier_noir, 12, 'clavettes'))   # 2 demi-cônes
+    soup.add(lathe([(0.0035, 0.0), (0.0055, 0.0), (0.0055, 0.035), (0.0035, 0.035)], (x, seat + 0.014, VALVE_Z), (0, 1, 0), M('fonte-guide', 0x7c7468, 0.5, 0.6), 16, 'guide'))   # guide Ø 7 × 11
+    soup.add(lathe([(0.0035, 0.0), (0.0062, 0.0), (0.0062, 0.005), (0.0035, 0.006)], (x, seat + 0.049, VALVE_Z), (0, 1, 0), caoutchouc, 16, 'joint-queue'))
+    SEATS.append((x, seat, rh, 0.0345 / 2 if adm else 0.0313 / 2))
 
 # =====================================================================================
 # JOINT DE CULASSE
@@ -322,7 +327,16 @@ pocket = box((XF - XR - 0.02, 0.03, 0.15), (EX, YH, 0.0), None)
 boolean(hb, pocket)
 apply_all(hb)
 delete(pocket)
+# chambres de combustion en baignoire sous chaque paire de soupapes, conduits d'admission et d'échappement
+for i in range(4):
+    for c in (box((0.064, 0.02, 0.044), (X(i), YD + 0.0015 + CH_D - 0.01, VALVE_Z - 0.004), None, bev=0.008),
+              cyl(0.0125, 0.12, (X(i) + (0.017 if i % 2 == 0 else -0.017), YD + 0.034, -0.07), (0, 0, 1), None, 16)):
+        boolean(hb, c)
+        apply_all(hb)
+        delete(c)
 cul.add(hb)
+for x, seat, rh, rs in SEATS:   # sièges rapportés (fonte spéciale, emmanchés à force)
+    cul.add(lathe([(rh - 0.002, 0.0), (rs, 0.0), (rs, 0.0045), (rh - 0.0005, 0.0045)], (x, seat - 0.0005, VALVE_Z), (0, 1, 0), M('fonte-siege', 0x6b6f72, 0.6, 0.5), 32, 'siege'))
 # Nervures et bossages latéraux (côté gauche : conduits ; côté droit : passages de tiges)
 for i in range(4):
     cul.add(box((0.05, 0.034, 0.012), (X(i), YD + 0.035, -0.111), alu, bev=0.004))   # brides d'échappement
@@ -386,19 +400,49 @@ fasteners(sump, 'vis-carter-huile', sv, r=0.005, length=0.015, travel=0.03)
 # POMPE À HUILE (planche 10) : dans le carter, entraînée par l'arbre à cames
 # =====================================================================================
 ph = Part('pompe-huile', (0, -0.3, 0.2))
-ph.add(box((0.05, 0.04, 0.05), (EX - 0.13, YC - 0.01, 0.06), alu, bev=0.006))
-ph.add(cyl(0.005, 0.12, (EX - 0.13, CAM_Y - 0.04, CAM_Z + 0.03), (0, 1, 0.15), acier, 10))   # arbre de commande
-ph.add(tube([(EX - 0.13, YC - 0.03, 0.06), (EX - 0.12, YC - 0.07, 0.04), (EX - 0.10, YS - 0.10, 0.02)], 0.008, acier_noir, seg=8))
-ph.add(cyl(0.03, 0.012, (EX - 0.095, YS - 0.112, 0.02), (0, 1, 0), acier_noir, 24))   # crépine
-fasteners(ph, 'vis-pompe-huile', [((EX - 0.13 + dx, YC + 0.012, 0.06 + dz), (0, 1, 0)) for dx, dz in ((0.018, 0.018), (-0.018, -0.018))], r=0.005, length=0.03, travel=0.04)
+PX, PZ = EX - 0.13, CAM_Z + 0.032          # arbre de commande vertical (allumeur au-dessus, pompe en dessous)
+PY = YC - 0.002                            # corps de pompe
+# pignon de commande d'allumeur et de pompe, engrené sur l'arbre à cames (fente : gros déport côté embrayage)
+ph.add(toothed(13, 0.016, 0.016, (PX, CAM_Y, PZ), (0, 1, 0), acier, hole=0.004, helix=math.radians(-45), depth=0.0018, name='pignon-commande'))
+ph.add(box((0.022, 0.004, 0.003), (PX + 0.002, CAM_Y + 0.0095, PZ), acier_noir))   # fente d'entraînement de l'allumeur
+ph.add(cyl(0.0045, CAM_Y - PY - 0.01, (PX, (CAM_Y + PY) / 2, PZ), (0, 1, 0), acier, 12, name='arbre-commande'))
+ph.add(cyl(0.0065, 0.016, (PX, PY + 0.022, PZ), (0, 1, 0), acier_noir, 6, name='douille'))   # douille d'entraînement (10)
+# corps, pignons menant et mené, couvercle et clapet de décharge (bille, ressort, siège, goupille)
+ph.add(box((0.056, 0.03, 0.044), (PX + 0.012, PY, PZ), alu, bev=0.005))
+ph.add(toothed(8, 0.0105, 0.012, (PX, PY - 0.021, PZ), (0, 1, 0), acier_taille, hole=0.0045, depth=0.0028, name='pignon-menant'))
+ph.add(toothed(8, 0.0105, 0.012, (PX + 0.021, PY - 0.021, PZ), (0, 1, 0), acier_taille, hole=0.004, depth=0.0028, phase=math.pi / 8, name='pignon-mene'))
+ph.add(cyl(0.004, 0.02, (PX + 0.021, PY - 0.018, PZ), (0, 1, 0), acier, 10, name='axe-pignon-fou'))
+ph.add(box((0.056, 0.006, 0.044), (PX + 0.012, PY - 0.031, PZ), alu, bev=0.002))   # couvercle
+ph.add(cyl(0.0045, 0.008, (PX + 0.03, PY - 0.031, PZ - 0.012), (0, 1, 0), acier, 12, name='siege-clapet'))
+ph.add(sphere(0.0038, (PX + 0.03, PY - 0.026, PZ - 0.012), acier_taille, 10, 6))
+ph.add(tube([(PX + 0.03 + 0.0028 * math.cos(2 * math.pi * k / 8), PY - 0.04 - 0.012 * k / 48, PZ - 0.012 + 0.0028 * math.sin(2 * math.pi * k / 8)) for k in range(49)], 0.0005, acier_noir, seg=5, res=1))
+# tuyau d'aspiration et crépine
+ph.add(tube([(PX + 0.012, PY - 0.034, PZ - 0.01), (PX + 0.015, PY - 0.07, PZ - 0.03), (EX - 0.10, YS - 0.10, 0.03)], 0.007, acier_noir, seg=8))
+ph.add(lathe([(0.0, 0.0), (0.032, 0.0), (0.034, 0.006), (0.03, 0.012), (0.008, 0.016), (0.0, 0.016)], (EX - 0.095, YS - 0.118, 0.03), (0, 1, 0), acier_noir, 32, 'crepine'))
+ph.add(lathe([(0.026, -0.0005), (0.033, -0.0005), (0.033, 0.0005), (0.026, 0.0005)], (EX - 0.095, YS - 0.117, 0.03), (0, 1, 0), M('grillage', 0x8a8f93, 0.8, 0.5), 32))
+fasteners(ph, 'vis-pompe-huile', [((PX + 0.012 + dx, PY + 0.015, PZ + dz), (0, 1, 0)) for dx, dz in ((0.022, 0.016), (-0.022, -0.016))], r=0.005, length=0.03, travel=0.04)
 
 # =====================================================================================
 # DISTRIBUTION (planche 8) : pignons, chaîne simple, tendeur, carter nervuré en tôle
 # =====================================================================================
 ch = Part('chaine-distribution', (-0.25, 0.05, 0))
 XD = XR - 0.012
-ch.add(gear(0.019, 0.0215, 19, 0.008, (XD, YC, 0), (1, 0, 0), acier, 'pignon-vilebrequin', hole=0.008))
-ch.add(gear(0.040, 0.0425, 38, 0.008, (XD, CAM_Y, CAM_Z), (1, 0, 0), acier, 'pignon-aac', hole=0.012))
+ch.add(toothed(19, 0.0205, 0.008, (XD, YC, 0), (1, 0, 0), acier, hole=0.008, depth=0.0018, name='pignon-vilebrequin'))
+ch.add(lathe([(0.008, -0.004), (0.014, -0.004), (0.014, 0.007), (0.008, 0.007)], (XD, YC, 0), (1, 0, 0), acier, 24))   # moyeu
+ch.add(box((0.012, 0.0025, 0.004), (XD, YC + 0.008, 0), acier_noir))   # clavette
+sp = toothed(38, 0.0412, 0.007, (XD, CAM_Y, CAM_Z), (1, 0, 0), acier, hole=0.012, depth=0.0018, name='pignon-aac')
+for k in range(5):   # allégements du pignon d'arbre à cames (photo p.36)
+    a = 2 * math.pi * k / 5 + 0.3
+    c = cyl(0.0075, 0.03, (XD, CAM_Y + 0.025 * math.cos(a), CAM_Z + 0.025 * math.sin(a)), (1, 0, 0), None, 16)
+    boolean(sp, c)
+    apply_all(sp)
+    delete(c)
+ch.add(sp)
+# repères de calage alignés sur l'axe vilebrequin – arbre à cames
+ux, uz = (CAM_Y - YC), CAM_Z
+nrm = math.hypot(ux, uz)
+for (cy, cz, r) in ((YC, 0.0, 0.016), (CAM_Y, CAM_Z, -0.035)):
+    ch.add(sphere(0.0018, (XD - 0.004, cy + r * ux / nrm, cz + r * uz / nrm), M('repere', 0xe9e4d4, 0.2, 0.4), 8, 5))
 # chaîne : boucle tangente aux deux pignons
 cy0, cz0, r0 = YC, 0.0, 0.0215
 cy1, cz1, r1 = CAM_Y, CAM_Z, 0.0425
@@ -414,7 +458,10 @@ for k in range(13):                     # petit pignon
     a = base - phi - (2 * math.pi - 2 * phi) * k / 12
     loop.append((XD, cy0 + r0 * math.cos(a), cz0 + r0 * math.sin(a)))
 ch.add(tube(loop, 0.003, acier_noir, seg=6, res=3, closed=True))
-ch.add(box((0.012, 0.06, 0.012), (XD, (YC + CAM_Y) / 2, -0.03), acier_noir, bev=0.003))   # patin de tendeur
+ch.add(box((0.012, 0.06, 0.006), (XD, (YC + CAM_Y) / 2, -0.03), M('patin', 0x2a2a2a, 0.0, 0.7), bev=0.002))   # patin de tendeur
+ch.add(box((0.008, 0.012, 0.014), (XD, (YC + CAM_Y) / 2, -0.039), acier_noir, bev=0.002))   # porte-patin
+ch.add(cyl(0.007, 0.022, (XD + 0.002, (YC + CAM_Y) / 2, -0.052), (0, 0, 1), fonte_usinee, 16))   # cylindre de retenue
+ch.add(box((0.006, 0.04, 0.034), (XD + 0.006, YC + 0.035, -0.05), acier_noir, bev=0.002))   # plaque d'appui
 ch.add(box((0.02, 0.03, 0.02), (XD + 0.004, YC + 0.035, -0.045), fonte_usinee, bev=0.003))
 fasteners(ch, 'vis-tendeur-chaine', [((XD - 0.006, YC + 0.035, -0.045 + s * 0.012), (-1, 0, 0)) for s in (1, -1)], r=0.005, length=0.02, travel=0.04)
 fasteners(ch, 'vis-pignon-aac', [((XD - 0.004, CAM_Y + s * 0.012, CAM_Z), (-1, 0, 0)) for s in (1, -1)], r=0.005, length=0.02, travel=0.04)
@@ -491,7 +538,7 @@ fastener(af, 'ecrou-filtre-air', (EX, AY + 0.062, -0.175), (0, 1, 0), kind='nut'
 # ALLUMAGE : allumeur, bougies, fils
 # =====================================================================================
 dl = Part('allumeur', (0, 0.5, 0.25))
-DX, DZ = EX - 0.13, CAM_Z + 0.045
+DX, DZ = EX - 0.13, CAM_Z + 0.032
 DY0 = CAM_Y + 0.095
 dl.add(cyl(0.022, 0.07, (DX, DY0 + 0.035, DZ), (0, 1, 0), alu, 24))
 dl.add(cyl(0.036, 0.025, (DX, DY0 + 0.08, DZ), (0, 1, 0), alu, 32))
@@ -547,13 +594,5 @@ fh.fasteners.append(filt)
 jg = Part('jauge', (0, 0.45, 0.1))
 jg.add(tube([(EX + 0.06, YC + 0.0, 0.112), (EX + 0.075, YD - 0.02, 0.13), (EX + 0.085, YH + 0.06, 0.15), (EX + 0.09, YH + 0.11, 0.155)], 0.0045, acier_noir, seg=6))
 jg.add(torus(0.014, 0.004, (EX + 0.09, YH + 0.128, 0.155), (0, 0, 1), M('jaune', 0xd2ae35, 0.1, 0.5), 20, 8))
-
-# =====================================================================================
-# CARTER D'EMBRAYAGE (côté boîte) : ajouté à la pièce « boîte »
-# =====================================================================================
-bt = Part('boite', (0.75, 0.15, 0))
-bell = lathe([(0.135, 0.0), (0.175, 0.0), (0.178, 0.008), (0.17, 0.05), (0.15, 0.10), (0.13, 0.12), (0.125, 0.12), (0.145, 0.10), (0.162, 0.05), (0.168, 0.008), (0.135, 0.008)],
-             (XF + 0.006, YC + 0.035, 0), (1, 0, 0), alu, 48)
-bt.add(bell)
 
 export(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'models', 'moteur.glb'))

@@ -1,11 +1,11 @@
 // Cache hors-ligne : une fois le site ouvert avec du réseau, il marche sans (pratique en plein désert).
-const VERSION = 'manuel-4l-v4';
+const VERSION = 'manuel-4l-v5';
 const ASSETS = [
   './', 'index.html', 'css/style.css',
   'js/app.js', 'js/car.js', 'js/data.js', 'js/rta.js',
   'vendor/three/three.module.min.js', 'vendor/three/addons/controls/OrbitControls.js',
   'vendor/three/addons/environments/RoomEnvironment.js', 'vendor/three/addons/loaders/GLTFLoader.js',
-  'vendor/three/addons/utils/BufferGeometryUtils.js', 'models/moteur.glb', 'models/trains.glb',
+  'vendor/three/addons/utils/BufferGeometryUtils.js', 'models/moteur.glb', 'models/transmission.glb', 'models/trains.glb',
   'models/caisse.glb', 'models/chassis.glb', 'models/interieur.glb', 'models/equipements.glb',
   'vendor/pdfjs/pdf.min.mjs', 'vendor/pdfjs/pdf.worker.min.mjs',
 ];
