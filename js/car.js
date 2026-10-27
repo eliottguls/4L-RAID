@@ -1039,6 +1039,10 @@ export const MODELS = [
     replaces: ['radiateur', 'motoventilateur', 'vase-expansion', 'durites', 'batterie', 'alternateur', 'demarreur',
       'fusibles', 'bobine', 'lave-glace', 'maitre-cylindre', 'limiteur'],
   },
+  {
+    url: 'models/electricite.glb',
+    replaces: [],
+  },
 ];
 
 export async function loadModels({ root, parts, fasteners }, models = MODELS) {

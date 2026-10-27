@@ -11,7 +11,10 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib import M, Part, box, cut, cyl, export, extrude, fastener, lathe, reset, rounded_rect, torus, tube  # noqa: E402
+from lib import M, M_img, Part, T, box, cut, cyl, export, extrude, fastener, lathe, reset, rounded_rect, torus, tube  # noqa: E402
+import bmesh  # noqa: E402
+import bpy  # noqa: E402
+import tempfile  # noqa: E402
 
 reset()
 OUT = sys.argv[sys.argv.index('--out') + 1] if '--out' in sys.argv else os.path.join(os.path.dirname(__file__), '..', '..', 'models', 'chassis.glb')
@@ -65,7 +68,7 @@ for s in (1, -1):
     pl.add(tube([(AXLE_F + 0.17, 0.64, s * 0.40), (AXLE_F + 0.10, 0.45, s * 0.40)], 0.014, tole))
 pl.add(box((0.06, 0.06, 0.88), (1.74, 0.43, 0), tole, 0.01))                 # traverse avant (support de radiateur)
 pl.add(box((0.05, 0.05, 0.80), (1.14, 0.20, 0), tole, 0.01))                 # traverse sous la boîte
-pl.add(box((0.10, 0.07, 1.22), (0.18, 0.32, 0), tole, 0.012))                # traverse d'ancrage des barres AV
+pl.add(box((0.10, 0.07, 1.22), (0.0, 0.32, 0), tole, 0.012))                 # traverse d'ancrage des barres AV (sous les sièges, p.55)
 # talon de siège arrière, traverse arrière (tubes des barres de torsion), plancher de coffre
 pl.add(extrude([(-0.58, FLOOR), (-0.60, FLOOR), (-0.78, FLOOR_R), (-0.76, FLOOR_R)], 1.12, (0, 0, 0), (0, 0, 1), tole_cl, up=(0, 1, 0)))
 pl.add(box((0.17, 0.09, 1.30), (-0.675, 0.28, 0), tole, 0.015))
@@ -85,6 +88,58 @@ for k in range(2):
 # =====================================================================================
 # ROUES : jante tôle 400 B 13 à voile ajouré, pneu 145 SR 13
 # =====================================================================================
+def sidewall_png():
+    """Marquages moulés du flanc (dimension, structure, sens), en relief gris sur caoutchouc noir.
+    L'image fait le tour du pneu (u = angle) ; v va du talon vers la bande de roulement."""
+    from PIL import Image, ImageDraw, ImageFont
+    w, h = 4096, 160
+    im = Image.new('RGB', (w, h), (29, 30, 31))
+    d = ImageDraw.Draw(im)
+    font = small = None
+    for f in ('/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed-Bold.ttf', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'):
+        if os.path.exists(f):
+            font, small = ImageFont.truetype(f, 92), ImageFont.truetype(f, 46)
+            break
+    for k, (txt, fnt, x) in enumerate((('145 SR 13', font, 0.12), ('RADIAL  X', font, 0.45), ('TUBELESS', small, 0.70),
+                                         ('145 SR 13', font, 0.80), ('M+S  73 S', small, 0.30), ('DOT  XU 4C  3488', small, 0.95))):
+        d.text((x * w, h * 0.5), txt, fill=(54, 55, 57), font=fnt, anchor='mm')
+    for y in (8, h - 8):
+        d.line((0, y, w, y), fill=(44, 45, 47), width=4)
+    path = os.path.join(tempfile.mkdtemp(prefix='flanc-'), 'flanc.png')
+    im.save(path)
+    return path
+
+
+flanc_m = M_img('flanc-pneu', sidewall_png(), 0.0, 0.9)
+valve_m = M('valve', 0x151515, 0.0, 0.7)
+plomb = M('masse-equilibrage', 0x8d8f91, 0.6, 0.5)
+
+
+def annulus(c, ax_s, r0, r1, off, mat, name='flanc', n=96):
+    """Anneau plan texturé sur le flanc extérieur du pneu (repère du site, axe z)."""
+    bm = bmesh.new()
+    uv = bm.loops.layers.uv.new('UVMap')
+    x, y, z = c
+    ring = []
+    for i in range(n + 1):
+        a = -2 * math.pi * i / n * ax_s     # sens horaire vu de l'extérieur : texte lisible
+        ring.append([bm.verts.new(T(x + r * math.cos(a), y + r * math.sin(a), z + ax_s * off(r))) for r in (r0, r1)])
+    for i in range(n):
+        f = bm.faces.new((ring[i][0], ring[i + 1][0], ring[i + 1][1], ring[i][1]))
+        for lp, (u, v) in zip(f.loops, ((i / n, 0), ((i + 1) / n, 0), ((i + 1) / n, 1), (i / n, 1))):
+            lp[uv].uv = (u, v)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    me = bpy.data.meshes.new(name)
+    bm.to_mesh(me)
+    bm.free()
+    o = bpy.data.objects.new(name, me)
+    bpy.context.scene.collection.objects.link(o)
+    o.data.materials.append(mat)
+    for p_ in me.polygons:
+        p_.use_smooth = True
+    return o
+
+
 TIRE = [(0.168, -0.062), (0.180, -0.070), (0.215, -0.074), (0.255, -0.072), (0.274, -0.064), (0.282, -0.052),
         (0.2845, -0.040), (0.281, -0.034), (0.2845, -0.028), (0.2845, -0.010), (0.281, -0.005), (0.2845, 0.0),
         (0.2845, 0.010), (0.281, 0.016), (0.2845, 0.022), (0.2845, 0.040), (0.282, 0.052), (0.274, 0.064),
@@ -117,6 +172,15 @@ def wheel(part, c, s, mount_off, set_id, idx0, nuts=True):
         a = 2 * math.pi * k / 3 + math.pi / 2
         part.add(torus(0.010, 0.0025, (x + 0.065 * math.cos(a), y + 0.065 * math.sin(a), z + s * (m + 0.004)), ax, jante, 16, 6, 'portee'))
     part.add(lathe([(0.0, 0.020), (0.022, 0.018), (0.030, 0.010), (0.032, 0.0)], (x, y, z + s * (m + 0.03)), ax, chrome, 24, 'cache-moyeu'))
+    # marquages du flanc extérieur (anneau entre 200 et 250 mm, posé sur le profil du pneu)
+    part.add(annulus(c, s, 0.205, 0.245, lambda r: 0.0754 - (r - 0.215) * 0.05, flanc_m))
+    # valve caoutchouc dans la gorge de jante, bouchon ; masses d'équilibrage agrafées au rebord
+    va = math.radians(200)
+    vp = (x + 0.150 * math.cos(va), y + 0.150 * math.sin(va), z + s * 0.035)
+    part.add(cyl(0.0055, 0.032, vp, (math.cos(va) * 0.55, math.sin(va) * 0.55, s), valve_m, 12, r2=0.004, name='valve'))
+    part.add(cyl(0.004, 0.009, (vp[0] - 0.006 * math.cos(va), vp[1] - 0.006 * math.sin(va), vp[2] + s * 0.016), (math.cos(va) * 0.55, math.sin(va) * 0.55, s), noir, 10, name='bouchon-valve'))
+    for k, a in enumerate((math.radians(20), math.radians(32))):
+        part.add(box((0.012, 0.006, 0.020), (x + 0.176 * math.cos(a), y + 0.176 * math.sin(a), z + s * 0.055), plomb, 0.0015, 'masse', axis=(math.cos(a), math.sin(a), 0)))
     if nuts:
         specs = []
         for k in range(3):
