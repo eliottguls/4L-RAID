@@ -1011,11 +1011,15 @@ export const MODELS = [
   {
     url: 'models/moteur.glb',
     replaces: ['bloc', 'culasse', 'cache-culbuteurs', 'carter-huile', 'filtre-huile', 'jauge', 'distribution', 'bougies',
-      'allumeur', 'carburateur', 'filtre-air', 'pompe-essence', 'pompe-eau', 'embrayage', 'collecteur'],
+      'allumeur', 'carburateur', 'filtre-air', 'pompe-essence', 'pompe-eau', 'collecteur'],
+  },
+  {
+    url: 'models/transmission.glb',
+    replaces: ['embrayage', 'boite', 'transmissions'],
   },
   {
     url: 'models/trains.glb',
-    replaces: ['boite', 'transmissions', 'triangles-av', 'porte-fusee', 'barres-torsion-av', 'amortisseurs-av', 'direction',
+    replaces: ['triangles-av', 'porte-fusee', 'barres-torsion-av', 'amortisseurs-av', 'direction',
       'bras-ar', 'barres-torsion-ar', 'amortisseurs-ar', 'disques-av', 'etriers-av', 'tambours-ar'],
   },
   {
@@ -1034,6 +1038,10 @@ export const MODELS = [
     url: 'models/equipements.glb',
     replaces: ['radiateur', 'motoventilateur', 'vase-expansion', 'durites', 'batterie', 'alternateur', 'demarreur',
       'fusibles', 'bobine', 'lave-glace', 'maitre-cylindre', 'limiteur'],
+  },
+  {
+    url: 'models/electricite.glb',
+    replaces: [],
   },
 ];
 
