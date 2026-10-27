@@ -31,6 +31,7 @@ vitre = M('vitre', 0x9cc0d3, 0.3, 0.05, alpha=0.28)
 gris_gtl = M('plastique-gris', 0x6a6d6f, 0.0, 0.7)
 plastique_noir = M('plastique-noir', 0x232425, 0.0, 0.65)
 chrome = M('chrome', 0xdfe2e5, 1.0, 0.15)
+laiton = M('laiton', 0xc8a24a, 0.9, 0.3)
 acier = M('acier', 0x9ca3a8, 0.85, 0.3)
 acier_noir = M('acier-noirci', 0x3c3f42, 0.7, 0.45)
 garniture = M('garniture-porte', 0x47413c, 0.0, 0.9)
@@ -553,6 +554,58 @@ def clip_x(pts, xm, keep_front):
 
 
 door_extra = {}
+# Serrures de portes, d'après le tutoriel « Dépose / repose mécanisme de fermeture portière et
+# hayon 4L » (la4ldesylvie.fr) : poignée intérieure tenue par 1 vis, poignée extérieure par 2 vis
+# (accès par l'intérieur), mécanisme par 2 vis sur le chant du caisson de porte ; il sort par
+# l'ouverture en le remontant pour dégager le bouton-poussoir. Barillet tenu par une goupille
+# cannelée chassée au chasse-goupille (tutoriel « barillets 4L », même site). Cotes estimées.
+lock_bits = {}
+lock_fx = {}
+
+
+def door_lock(x1, front, s):
+    xe = -0.205 if front else -0.826             # chant arrière de la porte à y 0,90
+    hx = -0.10 if front else -0.70
+    zo = zside(hx, 0.955)
+    ze = zside(xe, 0.90)
+    zi = 0.705
+    bits = []
+    # poignée intérieure (levier chromé sur platine)
+    xi = x1 + 0.10
+    bits.append(box((0.07, 0.03, 0.006), (xi, 0.93, s * (zi + 0.004)), plastique_noir, 0.003, 'platine-poignee-int'))
+    bits.append(box((0.05, 0.02, 0.012), (xi, 0.93, s * zi), chrome, 0.004, 'poignee-int'))
+    # poignée extérieure à palette
+    bits.append(box((0.12, 0.022, 0.016), (hx, 0.955, s * (zo + 0.006)), chrome, 0.006, 'poignee'))
+    bits.append(box((0.06, 0.012, 0.008), (hx + 0.02, 0.952, s * (zo + 0.016)), plastique_noir, 0.003, 'palette'))
+    bits.append(box((0.11, 0.018, 0.006), (hx, 0.955, s * (zo - 0.004)), joint, 0.002, 'joint-poignee'))
+    bits.append(box((0.03, 0.03, 0.02), (hx + 0.03, 0.952, s * (zo - 0.016)), acier, 0.003, 'renvoi-palette'))
+    # mécanisme (boîtier, pêne rotatif sur le chant, bouton de condamnation)
+    xm = xe + 0.025
+    bits.append(box((0.04, 0.10, 0.035), (xm, 0.90, s * (ze - 0.024)), acier_noir, 0.004, 'mecanisme-serrure'))
+    bits.append(box((0.004, 0.12, 0.030), (xe + 0.002, 0.90, s * (ze - 0.022)), acier, 0.001, 'platine-chant'))
+    bits.append(cyl(0.011, 0.012, (xe - 0.001, 0.88, s * (ze - 0.022)), (1, 0, 0), acier, 18, name='pene-rotatif'))
+    bits.append(cyl(0.004, 0.13, (xm, 1.00, s * (zi + 0.02)), (0, 1, 0), plastique_noir, 10, name='tige-condamnation'))
+    bits.append(cyl(0.007, 0.012, (xm, 1.07, s * (zi + 0.02)), (0, 1, 0), plastique_noir, 14, name='bouton-condamnation'))
+    # tringles : poignées → mécanisme
+    bits.append(tube([(xi, 0.93, s * (zi + 0.01)), ((xi + xm) / 2, 0.92, s * (zi + 0.018)), (xm + 0.01, 0.905, s * (ze - 0.035))], 0.0022, acier, 'tringle-poignee-int', seg=6))
+    bits.append(tube([(hx + 0.03, 0.948, s * (zo - 0.022)), (xm + 0.01, 0.93, s * (ze - 0.02))], 0.0022, acier, 'tringle-poignee-ext', seg=6))
+    # gâche sur le pied (pied milieu pour l'avant, pied arrière pour l'arrière)
+    bits.append(box((0.006, 0.07, 0.03), (xe - 0.010, 0.88, s * (ze - 0.022)), chrome, 0.002, 'gache'))
+    bits.append(cyl(0.005, 0.016, (xe - 0.004, 0.88, s * (ze - 0.022)), (1, 0, 0), chrome, 12, name='doigt-gache'))
+    fx = {'vis-poignees-int': [((xi + 0.022, 0.93, s * (zi - 0.002)), (0, 0, -s))],
+          'vis-poignees-ext': [((hx + dx, 0.955, s * (zo - 0.012)), (0, 0, -s)) for dx in (-0.045, 0.045)],
+          'vis-mecanismes-serrure': [((xe + 0.004, 0.90 + dy, s * (ze - 0.022)), (-1, 0, 0)) for dy in (-0.045, 0.045)],
+          'vis-gaches': [((xe - 0.013, 0.88 + dy, s * (ze - 0.022)), (-1, 0, 0)) for dy in (-0.025, 0.025)]}
+    if front:
+        bits.append(cyl(0.009, 0.006, (hx - 0.075, 0.955, s * (zo + 0.004)), (0, 0, s), chrome, 16, name='barillet'))
+        bits.append(cyl(0.008, 0.03, (hx - 0.075, 0.955, s * (zo - 0.015)), (0, 0, s), laiton, 16, name='corps-barillet'))
+        bits.append(box((0.006, 0.004, 0.012), (hx - 0.075, 0.955, s * (zo + 0.008)), noir, 0.001, 'entree-cle'))
+        bits.append(tube([(hx - 0.075, 0.955, s * (zo - 0.03)), (xm, 0.92, s * (ze - 0.03))], 0.002, acier, 'tringle-barillet', seg=6))
+        fx['goupilles-barillets'] = [((hx - 0.075, 0.965, s * (zo - 0.015)), (0, 1, 0))]
+    lock_fx[s, front] = fx
+    return bits
+
+
 for name, ol, s in DOORS:
     front = 'av' in name
     win = FD_WIN if front else RD_WIN
@@ -570,13 +623,9 @@ for name, ol, s in DOORS:
     trim = box((abs(x1 - x0), 0.58, 0.008), ((x0 + x1) / 2, 0.73, s * 0.712), garniture, 0.004, 'garniture')
     bits.append(trim)
     bits.append(box((0.22, 0.03, 0.04), ((x0 + x1) / 2 - 0.05, 0.86, s * 0.69), garniture, 0.01, 'accoudoir'))
-    bits.append(box((0.05, 0.02, 0.012), (x1 + 0.10 * (1 if front else -1) * -1, 0.93, s * 0.705), chrome, 0.004, 'poignee-int'))
-    # poignée extérieure (à palette), à l'arrière de chaque porte
-    hx = -0.10 if front else -0.70
-    bits.append(box((0.12, 0.022, 0.016), (hx, 0.955, s * (zside(hx, 0.955) + 0.006)), chrome, 0.006, 'poignee'))
-    bits.append(box((0.06, 0.012, 0.008), (hx + 0.02, 0.952, s * (zside(hx, 0.955) + 0.016)), plastique_noir, 0.003, 'palette'))
-    if front:
-        bits.append(cyl(0.009, 0.006, (hx - 0.075, 0.955, s * (zside(hx, 0.955) + 0.004)), (0, 0, s), chrome, 16, name='barillet'))
+    # serrure (pièce à part) : poignée intérieure à 100 mm du chant arrière, poignée extérieure à
+    # palette, barillet sur les portes avant, mécanisme sur le chant arrière, tringles et gâche
+    lock_bits[name] = door_lock(x1, front, s)
     # charnières apparentes (2 par porte, à l'avant)
     hx0 = 0.705 if front else -0.218
     for hy in (0.56, 0.90):
@@ -621,8 +670,29 @@ hatch_bits = []
 xr_at = lambda y: x_rear(y) + (SILL_IN if y >= BELT else 0.0)   # noqa: E731
 hatch_bits.append(poly_glass([(xr_at(y) + 0.006, y, z) for z, y in offset_outline(HATCH_WIN, 0.008)], vitre, 'lunette'))
 hatch_bits.append(seal([(xr_at(y) - 0.001, y, z) for z, y in HATCH_WIN], 0.007))
-hatch_bits.append(box((0.03, 0.03, 0.20), (x_rear(0.90) - 0.012, 0.90, 0), chrome, 0.01, 'poignee-hayon'))
-hatch_bits.append(cyl(0.011, 0.008, (x_rear(0.90) - 0.028, 0.90, 0.13), (-1, 0, 0), chrome, 16, name='serrure'))
+# serrure de hayon (la4ldesylvie.fr) : poignée seule tenue par 1 vis (à gauche), mécanisme par
+# 2 vis, ses 2 ergots logés dans les emboutis du hayon ; barillet tenu par goupille cannelée,
+# circlip et ressort de rappel. Pêne en bas du hayon, gâche sur la traverse de seuil (estimé).
+XH = x_rear(0.90)
+XB = x_rear(0.47)
+hatch_lock = [box((0.03, 0.03, 0.20), (XH - 0.012, 0.90, 0), chrome, 0.01, 'poignee-hayon'),
+              box((0.010, 0.05, 0.22), (XH + 0.004, 0.90, 0), joint, 0.003, 'joint-poignee'),
+              cyl(0.011, 0.008, (XH - 0.028, 0.90, 0.13), (-1, 0, 0), chrome, 16, name='barillet'),
+              cyl(0.010, 0.03, (XH - 0.010, 0.90, 0.13), (-1, 0, 0), laiton, 16, name='corps-barillet'),
+              torus(0.010, 0.0012, (XH + 0.004, 0.90, 0.13), (1, 0, 0), acier, 16, 4, 'circlip-barillet'),
+              lathe([(0.004, 0.0), (0.009, 0.0), (0.009, 0.012), (0.004, 0.012)], (XH + 0.006, 0.90, 0.13), (1, 0, 0), acier, 12, 'ressort-rappel'),
+              box((0.002, 0.004, 0.012), (XH - 0.0325, 0.90, 0.13), noir, 0.0005, 'entree-cle'),
+              box((0.035, 0.07, 0.10), (XB + 0.03, 0.50, 0), acier_noir, 0.004, 'mecanisme-hayon'),
+              box((0.008, 0.012, 0.03), (XB + 0.03, 0.50, 0.055), acier_noir, 0.002, 'ergot'),
+              box((0.008, 0.012, 0.03), (XB + 0.03, 0.50, -0.055), acier_noir, 0.002, 'ergot'),
+              box((0.012, 0.018, 0.03), (XB + 0.02, 0.462, 0), acier, 0.002, 'pene'),
+              tube([(XH + 0.012, 0.89, 0.0), (XH + 0.03, 0.70, 0.0), (XB + 0.03, 0.535, 0.0)], 0.0025, acier, 'tringle-hayon', seg=6),
+              box((0.04, 0.012, 0.05), (XB + 0.025, 0.442, 0), chrome, 0.002, 'gache-hayon'),
+              cyl(0.004, 0.05, (XB + 0.025, 0.452, 0), (0, 0, 1), chrome, 10, name='doigt-gache')]
+hatch_lock_fx = {'vis-poignee-hayon': [((XH + 0.012, 0.90, 0.07), (1, 0, 0))],
+                 'vis-mecanisme-hayon': [((XB + 0.049, 0.50, dz), (1, 0, 0)) for dz in (-0.03, 0.03)],
+                 'goupilles-barillets': [((XH - 0.010, 0.912, 0.13), (0, 1, 0))],
+                 'vis-gaches': [((XB + 0.025, 0.437, dz), (0, -1, 0)) for dz in (-0.017, 0.017)]}
 hatch_bits.append(box((0.006, 0.112, 0.522), (x_rear(0.655) - 0.006, 0.655, 0), support, 0.002, 'support-ar'))
 hatch_bits.append(quad((x_rear(0.655) - 0.0095, 0.655, 0), 0.52, 0.11, (-1, 0, 0), plaque_j, 'plaque-ar'))
 hatch_bits.append(box((0.03, 0.025, 0.12), (x_rear(0.73) - 0.012, 0.735, 0), plastique_noir, 0.006, 'eclaireur-plaque'))
@@ -811,6 +881,19 @@ for name, _, s in DOORS:
     p.add(*door_skins[name], *door_extra[name])
 ph = Part('hayon', (-0.55, 0.35, 0))
 ph.add(*hatch_skins, *hatch_bits)
+# serrures : pièce à part par ouvrant, sortie de biais pour se dégager de la porte en vue éclatée
+for name, _, s in DOORS:
+    front = 'av' in name
+    pl_ = Part('serrures', (0.25 if front else -0.25, 0.15, 0.35 * s))
+    pl_.add(*lock_bits[name])
+    for set_id, specs in lock_fx[s, front].items():
+        kind = 'pin' if set_id.startswith('goupilles') else 'screw'
+        fasteners(pl_, set_id, specs, kind=kind, r=0.0025 if kind == 'pin' else 0.0035, length=0.014, travel=0.03)
+plh = Part('serrures', (-0.35, 0.15, 0))
+plh.add(*hatch_lock)
+for set_id, specs in hatch_lock_fx.items():
+    kind = 'pin' if set_id.startswith('goupilles') else 'screw'
+    fasteners(plh, set_id, specs, kind=kind, r=0.0025 if kind == 'pin' else 0.0035, length=0.014, travel=0.03)
 pk = Part('capot', (0.35, 0.65, 0))
 pk.add(hood, *hood_frame)
 pv = Part('vitrage', (0, 0.6, 0))

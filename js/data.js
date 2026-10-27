@@ -22,6 +22,7 @@ export const SYSTEMS = [
   { id: 'trains', name: 'Trains, suspension, direction', color: '#4aa36c' },
   { id: 'freins', name: 'Freins', color: '#d6453d' },
   { id: 'electricite', name: 'Électricité', color: '#e0782b' },
+  { id: 'raid', name: 'Préparation raid', color: '#b48a46' },
 ];
 
 // with : la pièce part avec cet ensemble quand les deux sont déposés (même mouvement dans la 3D).
@@ -48,12 +49,12 @@ export const PARTS = {
   },
   portes: {
     name: 'Portes', system: 'carrosserie',
-    desc: 'Quatre portes latérales. Seules les portes avant ont une serrure à clé.',
+    desc: 'Quatre portes latérales sur deux charnières apparentes. Seules les portes avant ont une serrure à clé. Les serrures, poignées et barillets sont une pièce à part (Serrures).',
     specs: [], pages: [11, 12],
   },
   hayon: {
     name: 'Hayon', system: 'carrosserie',
-    desc: 'Hayon arrière. Donne accès à la vis de déblocage du berceau de roue de secours (au centre de la traverse).',
+    desc: 'Hayon arrière sur deux charnières en haut, tenu ouvert par deux compas. Serrure, poignée et barillet : voir Serrures. Donne accès à la vis de déblocage du berceau de roue de secours (au centre de la traverse).',
     specs: [], pages: [10, 11],
   },
   vitrage: {
@@ -372,6 +373,57 @@ export const PARTS = {
   'centrale-clignotante': { name: 'Centrale clignotante', system: 'electricite', desc: 'Sous la planche de bord, à gauche. Protégée par le fusible n° 4 (5 A). Clignotement trop rapide : une lampe est grillée.', specs: [['Fusible', 'n° 4, 5 A']], pages: [71, 76] },
   plafonnier: { name: 'Plafonnier', system: 'electricite', desc: 'Au milieu du pavillon, avec son interrupteur. Lampe navette 10 × 39, 5 W. Alimenté avant contact par le fusible n° 1.', specs: [['Lampe', 'navette 10 × 39, 5 W, type C 11'], ['Fusible', 'n° 1, 8 A']], pages: [8, 71, 76] },
   ampoules: { name: 'Lampes', system: 'electricite', desc: 'Tableau des lampes de la RTA.', specs: [['Projecteurs', '45/40 W, culot P 45 t 41, jaune'], ['Position AV', '5 W, R 19'], ['Position et stop AR', '21/5 W, P 25-2'], ['Clignotants AV et AR', '21 W, P 25-1, culot BA 15 s'], ['Répétiteurs latéraux', '4 W, T 8/4, culot BA 9 s'], ['Éclaireur de plaque', '5 W, R 19'], ['Témoins et éclairage du tableau', '2 W, T 8, culot BA 9 s']], pages: [71] },
+  // ---------- Ouvrants : serrures (sources internet, la RTA n'en parle pas) ----------
+  serrures: {
+    name: 'Serrures, poignées et barillets', system: 'carrosserie',
+    desc: 'Sur chaque porte : poignée intérieure (1 vis), poignée extérieure à palette (2 vis, accessibles par l’intérieur après dépose de la garniture), mécanisme vissé sur le chant arrière du caisson de porte (2 vis), reliés par des tringles ; bouton de condamnation sur le rebord de vitre ; gâche à doigt sur le pied (2 vis). Les portes avant ont un barillet tenu par une goupille cannelée. Le mécanisme sort par l’ouverture de la porte en le remontant pour dégager le bouton-poussoir ; une patte de maintien a été ajoutée à partir de 1973. Hayon : poignée tenue par 1 vis (à gauche), mécanisme par 2 vis avec 2 ergots logés dans les emboutis du hayon, barillet tenu par goupille cannelée, circlip et ressort de rappel. Positions des pièces estimées.',
+    specs: [['Poignée intérieure de porte', '1 vis'], ['Poignée extérieure de porte', '2 vis'], ['Mécanisme de porte', '2 vis sur le chant'], ['Poignée de hayon', '1 vis'], ['Mécanisme de hayon', '2 vis + 2 ergots'], ['Barillets', 'goupille cannelée (chasse-goupille)']],
+    pages: [11, 12],
+    sources: [['Tutoriel dépose / repose mécanisme de fermeture portière et hayon 4L (la4ldesylvie.fr)', 'https://www.la4ldesylvie.fr/images/stories/tutoriels/carrosserie/serrures/depose-repose-mecanisme-fermeture-portiere-hayon-4l.pdf'], ['Tutoriel dépose et changement des barillets 4L (la4ldesylvie.fr)', 'https://www.la4ldesylvie.fr/images/stories/tutoriels/carrosserie/barillets/depose-changement-modification-barillets-4l.pdf']],
+  },
+  // ---------- Préparation raid (sources internet) ----------
+  'blindage-moteur': {
+    name: 'Blindage moteur et boîte (sabot)', system: 'raid', below: true,
+    desc: 'Tôle d’acier galvanisé de 3 mm qui protège le carter d’huile, la boîte et le bas du radiateur des pierres et des marches de piste. À l’avant, elle remonte jusqu’à la traverse avant ; elle se fixe sur les écrous de la traverse avant et du support de boîte (4 vis). Trou d’accès au bouchon de vidange, lumières d’aération, bords tombés raidisseurs. La position des fixations varie d’un fabricant à l’autre : celle de la 3D est estimée.',
+    specs: [['Matière', 'acier galvanisé 3 mm'], ['Fixation', '4 vis (traverse avant et support de boîte)'], ['Garde au sol d’origine en charge', '175 mm (RTA)']],
+    pages: [79],
+    sources: [['Blindages raid Renault R4 TL / GTL / Savane / Clan (vehicules-anciens.fr)', 'https://vehicules-anciens.fr/shop/raid-protection-plates-renault-r4-tl-gtl-savane-clan-r4-f4-r4-f6/'], ['4L Trophy : comment bien préparer son véhicule (chacun-sa-route.fr)', 'https://www.chacun-sa-route.fr/4l-trophy-comment-bien-preparer-son-vehicule.html']],
+  },
+  'blindage-reservoir': {
+    name: 'Blindage du réservoir', system: 'raid', below: true,
+    desc: 'Plaque d’acier galvanisé 3 mm sous le réservoir de 34 L, à 25 mm sous la cuve. Patte avant vissée sous la traverse arrière, pattes arrière à écrous cage vers le longeron arrière droit et le plancher de coffre (4 vis). Le kit complet compte 8 vis pour les deux blindages.',
+    specs: [['Matière', 'acier galvanisé 3 mm'], ['Fixation', '4 vis, pattes arrière à écrous cage']],
+    pages: [79],
+    sources: [['Blindages raid Renault R4 TL / GTL / Savane / Clan (vehicules-anciens.fr)', 'https://vehicules-anciens.fr/shop/raid-protection-plates-renault-r4-tl-gtl-savane-clan-r4-f4-r4-f6/']],
+  },
+  'anneaux-remorquage': {
+    name: 'Anneaux de remorquage', system: 'raid', below: true,
+    desc: 'Obligatoires au 4L Trophy, à l’avant et à l’arrière. Platine boulonnée sous la traverse avant (côté droit) et sous le longeron arrière droit (à l’opposé de la sortie d’échappement), anneau dépassant sous le pare-chocs. Vérifier le serrage avant chaque étape de sable. Position estimée.',
+    specs: [['Exigence', 'avant et arrière, obligatoires (règlement 4L Trophy)'], ['Fixation', '2 vis par anneau']],
+    pages: [],
+    sources: [['4L Trophy : comment bien préparer son véhicule (chacun-sa-route.fr)', 'https://www.chacun-sa-route.fr/4l-trophy-comment-bien-preparer-son-vehicule.html'], ['Blindages raid Renault R4 TL / GTL / Savane / Clan (vehicules-anciens.fr)', 'https://vehicules-anciens.fr/shop/raid-protection-plates-renault-r4-tl-gtl-savane-clan-r4-f4-r4-f6/']],
+  },
+  'grillage-calandre': {
+    name: 'Grillage de calandre', system: 'raid',
+    desc: 'Maille aluminium fixée par colliers derrière la grille de calandre : elle arrête cailloux, sable et insectes avant le radiateur. Recommandée pour le raid. À nettoyer à la soufflette chaque soir dans les étapes de sable, sinon le moteur chauffe.',
+    specs: [['Fixation', '4 colliers']],
+    pages: [37],
+    sources: [['4L Trophy : comment bien préparer son véhicule (chacun-sa-route.fr)', 'https://www.chacun-sa-route.fr/4l-trophy-comment-bien-preparer-son-vehicule.html']],
+  },
+  extincteur: {
+    name: 'Extincteur 2 kg', system: 'raid',
+    desc: 'Extincteur à poudre de 2 kg couché entre les sièges avant sur un support à deux colliers, vissé au plancher (4 vis), poignée vers l’avant pour être saisi par le conducteur comme par le passager. Vérifier la date et l’aiguille du manomètre dans le vert.',
+    specs: [['Capacité', '2 kg (poudre)'], ['Fixation', 'support 4 vis']],
+    pages: [],
+    sources: [['Check-list 4L Trophy (drivemetotheworld.com)', 'https://www.drivemetotheworld.com/check-list-4l-trophy/']],
+  },
+  jerrican: {
+    name: 'Jerrican 20 L', system: 'raid',
+    desc: 'Jerrican métallique de 20 L (470 × 345 × 165 mm) debout dans le coffre, côté gauche (loin de la goulotte de remplissage à droite), sanglé sur deux ancrages vissés au plancher. Avec 34 L de réservoir et une consommation de 7 à 9 L/100 km en piste, il double l’autonomie.',
+    specs: [['Capacité', '20 L'], ['Dimensions', '470 × 345 × 165 mm'], ['Fixation', 'sangle sur 2 ancrages']],
+    pages: [79],
+    sources: [['Check-list 4L Trophy (drivemetotheworld.com)', 'https://www.drivemetotheworld.com/check-list-4l-trophy/']],
+  },
   chauffage: { name: 'Chauffage et ventilation', system: 'refroidissement', desc: 'Boîtier contre le tablier sous l’auvent : radiateur de chauffage alimenté par deux durites du moteur (robinet d’eau), moto-ventilateur à deux vitesses depuis 1981, volets commandés par câbles depuis les boutons de la planche, gaines de désembuage et bouche de pieds derrière la planche.', specs: [['Moto-ventilateur', '2 vitesses (depuis 1981)']], pages: [75, 76, 85] },
 };
 
@@ -1409,6 +1461,76 @@ export const PROCEDURES = [
       { t: 'Poser des chandelles sous les longerons avant de travailler dessous.', focus: ['plateforme'] },
     ],
   },
+  {
+    id: 'serrure-porte', title: 'Changer une serrure ou une poignée de porte', system: 'carrosserie',
+    keywords: ['serrure', 'poignée', 'poignée de porte', 'porte', 'mécanisme', 'fermeture', 'gâche', 'porte qui ferme mal', 'porte bloquée', 'condamnation', 'tringle'],
+    difficulty: 2, duration: '1 h', interval: 'Porte qui ferme mal, poignée cassée ou molle',
+    tools: ['Tournevis cruciforme', 'Tournevis plat fin (agrafes de garniture)', 'Pince à bec', 'Graisse blanche ou au lithium'], supplies: ['Mécanisme, poignée ou tringle neufs selon le cas'],
+    torques: [], pages: [11, 12], parts: ['serrures', 'portes'],
+    sources: [['Tutoriel dépose / repose mécanisme de fermeture portière et hayon 4L (la4ldesylvie.fr)', 'https://www.la4ldesylvie.fr/images/stories/tutoriels/carrosserie/serrures/depose-repose-mecanisme-fermeture-portiere-hayon-4l.pdf']],
+    warning: 'La RTA ne décrit pas les serrures : procédure d’après le tutoriel cité en source. Vitre remontée, porte calée ouverte.',
+    steps: [
+      { t: 'Porte ouverte et calée, vitre fermée. Déposer l’accoudoir et la garniture de porte : les agrafes se déboîtent au tournevis plat en faisant levier près de chacune.', focus: ['portes', 'serrures'] },
+      { t: 'Poignée intérieure : retirer sa vis (1 par porte) et la dégager de sa tringle.', focus: ['serrures'] },
+      { t: 'Poignée extérieure : par l’intérieur du caisson, retirer ses 2 vis, décrocher la tringle et sortir la poignée par l’extérieur avec son joint.', focus: ['serrures'] },
+      { t: 'Mécanisme : retirer les 2 vis sur le chant arrière de la porte. Sur les modèles depuis 1973, retirer aussi la patte de maintien.', focus: ['serrures'] },
+      { t: 'Sortir le mécanisme par l’ouverture de la porte en le remontant pour dégager le bouton-poussoir de condamnation, tringles décrochées.', remove: ['serrures'] },
+      { t: 'Remontage dans l’ordre inverse : graisser le pêne et les articulations, raccrocher les tringles avant de visser. Essayer poignées et condamnation porte ouverte, puis porte fermée.', focus: ['serrures'] },
+      { t: 'Si la porte claque fort ou ne ferme qu’au deuxième coup : desserrer les vis de la gâche sur le pied, la déplacer de 1 à 2 mm et resserrer.', focus: ['serrures', 'caisse'] },
+    ],
+  },
+  {
+    id: 'barillet', title: 'Changer un barillet de porte ou de hayon', system: 'carrosserie',
+    keywords: ['barillet', 'serrure', 'clé', 'clef', 'cylindre', 'clé qui tourne dans le vide', 'goupille', 'hayon', 'clé perdue'],
+    difficulty: 2, duration: '45 min', interval: 'Clé perdue, barillet grippé ou forcé',
+    tools: ['Chasse-goupille fin', 'Petit marteau', 'Pince à circlips', 'Tournevis'], supplies: ['Barillet neuf avec ses clés', 'Goupille cannelée neuve', 'Graphite ou lubrifiant sec'],
+    torques: [], pages: [11, 12], parts: ['serrures'],
+    sources: [['Tutoriel dépose et changement des barillets 4L (la4ldesylvie.fr)', 'https://www.la4ldesylvie.fr/images/stories/tutoriels/carrosserie/barillets/depose-changement-modification-barillets-4l.pdf']],
+    warning: 'Procédure d’après le tutoriel cité en source (la RTA n’en parle pas). Pour ne garder qu’une clé, on peut recoder un barillet neuf avec les paillettes d’un ancien.',
+    steps: [
+      { t: 'Porte avant : déposer la garniture (voir « Changer une serrure ») pour atteindre le corps du barillet derrière la poignée. Hayon : ouvrir et déposer la garniture intérieure.', focus: ['serrures', 'portes', 'hayon'] },
+      { t: 'Tenir le barillet et chasser la goupille cannelée au chasse-goupille, à petits coups.', focus: ['serrures'] },
+      { t: 'Hayon seulement : retirer le circlip et le ressort de rappel au dos du barillet.', focus: ['serrures'] },
+      { t: 'Sortir le barillet par l’extérieur et décrocher sa tringle.', remove: ['serrures'] },
+      { t: 'Monter le barillet neuf, goupille neuve, circlip et ressort sur le hayon. Lubrifier au graphite (jamais de graisse, qui colle la poussière). Essayer la clé porte ouverte avant de remonter la garniture.', focus: ['serrures'] },
+    ],
+  },
+  {
+    id: 'blindages', title: 'Poser les blindages et les anneaux de remorquage', system: 'raid',
+    keywords: ['blindage', 'sabot', 'plaque de protection', 'protection carter', 'protection réservoir', 'anneau de remorquage', 'remorquage', 'raid', '4L Trophy', 'sable', 'piste', 'cailloux'],
+    difficulty: 2, duration: '2 h', interval: 'Avant le raid, puis contrôle à chaque étape',
+    tools: ['Chandelles ou fosse', 'Clés de 13 et 17', 'Frein-filet moyen', 'Brosse métallique et dégrippant'], supplies: ['Kit blindages (moteur + réservoir, 8 vis)', 'Anneaux de remorquage avant et arrière et leurs vis'],
+    torques: [], pages: [10, 79], parts: ['blindage-moteur', 'blindage-reservoir', 'anneaux-remorquage', 'plateforme'],
+    sources: [['Blindages raid Renault R4 TL / GTL / Savane / Clan (vehicules-anciens.fr)', 'https://vehicules-anciens.fr/shop/raid-protection-plates-renault-r4-tl-gtl-savane-clan-r4-f4-r4-f6/'], ['4L Trophy : comment bien préparer son véhicule (chacun-sa-route.fr)', 'https://www.chacun-sa-route.fr/4l-trophy-comment-bien-preparer-son-vehicule.html']],
+    warning: 'Les fabricants ne publient pas de couple : serrage ferme au frein-filet, et contrôle après 50 km puis chaque soir en raid. Jamais sous la voiture sans chandelles.',
+    steps: [
+      { t: 'Voiture sur chandelles sous les longerons. Brosser et dégripper les écrous de la traverse avant et du support de boîte qui recevront le blindage.', focus: ['plateforme'] },
+      { t: 'Présenter le blindage moteur sous le carter, trou d’accès face au bouchon de vidange, et engager les 4 vis sans serrer : 2 sous la traverse avant, 2 sous le support de boîte avec leurs entretoises.', focus: ['blindage-moteur'] },
+      { t: 'Centrer le blindage pour qu’il ne touche ni les barres de torsion ni les bras inférieurs, puis serrer les 4 vis au frein-filet.', focus: ['blindage-moteur'] },
+      { t: 'Blindage de réservoir : engager la patte avant sous la traverse arrière et les pattes arrière face aux écrous cage, puis serrer les 4 vis. Vérifier qu’il reste un jour sous la cuve et que l’échappement passe à distance.', focus: ['blindage-reservoir', 'reservoir', 'echappement'] },
+      { t: 'Anneaux de remorquage : platine sous la traverse avant et sous le longeron arrière droit, 2 vis chacun au frein-filet. L’anneau doit dépasser sous le pare-chocs pour accrocher une sangle sans abîmer la carrosserie.', focus: ['anneaux-remorquage'] },
+      { t: 'Vérifier la vidange : le bouchon doit rester accessible par le trou du blindage. Après 50 km, resserrer toutes les vis.', focus: ['blindage-moteur'] },
+    ],
+  },
+  {
+    id: 'preparation-raid', title: 'Préparer la 4L pour le 4L Trophy', system: 'raid',
+    keywords: ['4L Trophy', 'raid', 'préparation', 'règlement', 'contrôle technique', 'check-list', 'liste', 'équipement', 'extincteur', 'jerrican', 'roue de secours', 'sangle', 'désert', 'sable'],
+    difficulty: 1, duration: 'Plusieurs week-ends', interval: 'Avant le départ',
+    tools: ['Toutes les procédures liées ci-dessous'], supplies: ['Deux roues de secours', 'Anneaux de remorquage', 'Extincteur 2 kg', 'Jerrican 20 L', 'Sangle de remorquage 5 m avec manille', 'Vis platinées, bougies, courroie et durites de rechange', 'Grillage de calandre', 'Blindages'],
+    torques: [], pages: [19, 79], parts: ['plateforme', 'blindage-moteur', 'anneaux-remorquage', 'grillage-calandre', 'extincteur', 'jerrican', 'roue-secours', 'ceintures'],
+    sources: [['4L Trophy : comment bien préparer son véhicule (chacun-sa-route.fr)', 'https://www.chacun-sa-route.fr/4l-trophy-comment-bien-preparer-son-vehicule.html'], ['Check-list 4L Trophy (drivemetotheworld.com)', 'https://www.drivemetotheworld.com/check-list-4l-trophy/'], ['Blindages raid Renault R4 TL / GTL / Savane / Clan (vehicules-anciens.fr)', 'https://vehicules-anciens.fr/shop/raid-protection-plates-renault-r4-tl-gtl-savane-clan-r4-f4-r4-f6/']],
+    warning: 'Le règlement change d’une édition à l’autre : vérifier la version officielle de l’année auprès de l’organisation. Liste d’après les sources citées.',
+    steps: [
+      { t: 'Obligatoire : contrôle technique à jour et plateforme sans trou de corrosion. Faire le contrôle complet du soubassement (procédure « Contrôler la plateforme »).', focus: ['plateforme'] },
+      { t: 'Obligatoire : ceintures et ancrages d’origine en bon état.', focus: ['ceintures'] },
+      { t: 'Obligatoire : deux roues de secours. La seconde se range dans le coffre ou sur une galerie, sanglée.', focus: ['roue-secours'] },
+      { t: 'Obligatoire : anneaux de remorquage à l’avant et à l’arrière.', focus: ['anneaux-remorquage'] },
+      { t: 'Recommandé : blindages sous le moteur et le réservoir (procédure « Poser les blindages »).', focus: ['blindage-moteur', 'blindage-reservoir'] },
+      { t: 'Recommandé : grillage derrière la calandre contre le sable et les cailloux, et contrôle du motoventilateur et de son thermocontact (certains ajoutent un second ventilateur).', focus: ['grillage-calandre', 'radiateur', 'motoventilateur'] },
+      { t: 'Équipement : extincteur 2 kg fixé à portée du conducteur, jerrican 20 L sanglé dans le coffre, sangle de remorquage 5 m avec manille.', focus: ['extincteur', 'jerrican'] },
+      { t: 'Rechanges : vis platinées et condensateur, bougies, courroie, durites et colliers, ampoules, fusibles. Faire une vidange complète et changer les filtres avant de partir.', focus: ['allumeur', 'bougies', 'durites'] },
+    ],
+  },
 ];
 
 // Vis, écrous et bouchons modélisés en 3D (un jeu = un groupe de fixations identiques).
@@ -1515,6 +1637,19 @@ export const FASTENERS = {
   'vis-poignees': { name: 'Vis des poignées de maintien', part: 'garnitures', count: 6 },
   'vis-chauffage': { name: 'Vis du boîtier de chauffage', part: 'chauffage', count: 4, pages: [75] },
   'vis-ceintures': { name: 'Vis d’ancrage des ceintures', part: 'ceintures', count: 4, note: '4 ancrages par ceinture : enrouleur, renvoi, ancrage bas, boucle.' },
+  'vis-poignees-int': { name: 'Vis des poignées intérieures de portes', part: 'serrures', count: 4, note: '1 vis par porte, sous le cache de la poignée.' },
+  'vis-poignees-ext': { name: 'Vis des poignées extérieures de portes', part: 'serrures', count: 8, note: '2 vis par porte, accessibles par l’intérieur après dépose de la garniture.' },
+  'vis-mecanismes-serrure': { name: 'Vis des mécanismes de serrure de portes', part: 'serrures', count: 8, note: '2 vis par porte, sur le chant arrière du caisson.' },
+  'vis-gaches': { name: 'Vis des gâches', part: 'serrures', note: 'Régler la gâche vis desserrées pour que la porte ferme sans claquer fort ni frotter (nombre de vis estimé).' },
+  'goupilles-barillets': { name: 'Goupilles cannelées des barillets', part: 'serrures', count: 3, note: 'Portes avant et hayon. Se chassent au chasse-goupille fin, en tenant le barillet.' },
+  'vis-poignee-hayon': { name: 'Vis de la poignée de hayon', part: 'serrures', count: 1, note: 'La vis de gauche, vue de l’intérieur du hayon.' },
+  'vis-mecanisme-hayon': { name: 'Vis du mécanisme de hayon', part: 'serrures', count: 2, note: 'Les 2 ergots du mécanisme se logent dans les emboutis du hayon.' },
+  'vis-blindage-moteur': { name: 'Vis du blindage moteur', part: 'blindage-moteur', count: 4, note: 'Sur les écrous de la traverse avant et du support de boîte. Frein-filet, contrôle à chaque étape (couple non publié par le fabricant).' },
+  'vis-blindage-reservoir': { name: 'Vis du blindage de réservoir', part: 'blindage-reservoir', count: 4, note: 'Pattes arrière à écrous cage.' },
+  'vis-anneaux-remorquage': { name: 'Vis des anneaux de remorquage', part: 'anneaux-remorquage', count: 4, note: 'Vis de classe 8.8 au minimum, frein-filet (position estimée).' },
+  'colliers-grillage': { name: 'Colliers du grillage de calandre', part: 'grillage-calandre', count: 4 },
+  'vis-support-extincteur': { name: 'Vis du support d’extincteur', part: 'extincteur', count: 4, note: 'Contre-plaques sous le plancher.' },
+  'ancrages-jerrican': { name: 'Ancrages de la sangle du jerrican', part: 'jerrican', count: 2 },
 };
 
 // Vis à dévisser (unscrew), à resserrer (screw) ou à repérer (bolts) à chaque étape,
@@ -1623,6 +1758,10 @@ const STEP_FASTENERS = {
   durite: { 0: { unscrew: ['bouchon-vase'] }, 1: { unscrew: ['colliers-durites'] }, 3: { refit: ['durites'], screw: ['colliers-durites'] }, 4: { screw: ['bouchon-vase'] } },
   'aile-avant': { 0: { unscrew: ['bornes-batterie'] }, 2: { unscrew: ['vis-ailes-av'] }, 5: { refit: ['ailes-av'], screw: ['vis-ailes-av'] }, 6: { refit: ['phares'], screw: ['bornes-batterie'] } },
   'controle-plateforme': { 4: { bolts: ['boulons-caisse'] }, 5: { bolts: ['agrafes-canalisation', 'suspentes-echappement', 'vis-sangles-reservoir'] } },
+  'serrure-porte': { 1: { unscrew: ['vis-poignees-int'] }, 2: { unscrew: ['vis-poignees-ext'] }, 3: { unscrew: ['vis-mecanismes-serrure'] }, 5: { screw: ['vis-mecanismes-serrure', 'vis-poignees-ext', 'vis-poignees-int'] }, 6: { bolts: ['vis-gaches'] } },
+  barillet: { 1: { unscrew: ['goupilles-barillets'] }, 4: { screw: ['goupilles-barillets'] } },
+  blindages: { 1: { bolts: ['vis-blindage-moteur'] }, 2: { screw: ['vis-blindage-moteur'] }, 3: { screw: ['vis-blindage-reservoir'] }, 4: { screw: ['vis-anneaux-remorquage'] } },
+  'preparation-raid': { 6: { bolts: ['vis-support-extincteur', 'ancrages-jerrican'] } },
 };
 for (const p of PROCEDURES) {
   for (const [i, extra] of Object.entries(STEP_FASTENERS[p.id] || {})) Object.assign(p.steps[i], extra);
@@ -1632,6 +1771,6 @@ export const MAINTENANCE = [
   { when: 'Chaque départ / chaque matin en raid', items: ['Niveau d’huile', 'Niveau du vase d’expansion (à froid)', 'Pression des pneus', 'Niveau de liquide de frein', 'Éclairage et clignotants'], procs: ['niveau-huile'] },
   { when: 'Tous les 7 500 km ou 6 mois', items: ['Vidange moteur + filtre à huile'], procs: ['vidange-moteur'] },
   { when: 'Tous les 15 000 km ou 1 an', items: ['Vidange boîte de vitesses', 'Garde d’embrayage', 'Jeu aux culbuteurs', 'Bougies et vis platinées', 'Soufflets de transmission et de crémaillère', 'Jeux de direction et du train avant', 'Amortisseurs', 'Freins et courroies', 'Filtre à essence', 'Durites et colliers', 'Ligne d’échappement et suspentes'], procs: ['vidange-boite', 'garde-embrayage', 'culbuteurs', 'bougies', 'rupteur', 'soufflet-cardan', 'courroie', 'filtre-essence', 'durite', 'echappement'] },
-  { when: 'Avant le raid', items: ['Plateforme et soubassement (rouille, boulons de caisse)', 'Canalisations d’essence et de frein', 'Motoventilateur et thermocontact'], procs: ['controle-plateforme', 'motoventilateur'] },
+  { when: 'Avant le raid', items: ['Règlement 4L Trophy : anneaux de remorquage, deux roues de secours, ceintures d’origine', 'Blindages, grillage de calandre, extincteur, jerrican', 'Plateforme et soubassement (rouille, boulons de caisse)', 'Canalisations d’essence et de frein', 'Motoventilateur et thermocontact'], procs: ['controle-plateforme', 'motoventilateur', 'preparation-raid', 'blindages'] },
   { when: 'Tous les 2 ans', items: ['Liquide de frein', 'Liquide de refroidissement'], procs: ['purge-freins', 'purge-refroidissement'] },
 ];

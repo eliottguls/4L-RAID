@@ -576,6 +576,12 @@ function pageButtons(pages, title) {
     `<button class="page-btn" data-page="${n}" data-title="${esc(title)}" title="${hasRta() ? 'Ouvrir la page' : 'Charge ta RTA pour ouvrir la page'}">p. ${n}</button>`).join('')}</div>`;
 }
 
+function sourceLinks(sources) {
+  if (!sources?.length) return '';
+  return `<div class="sources"><span class="muted">Sources internet (la RTA ne suffit pas ici) :</span><ul>${sources.map(([label, url]) =>
+    `<li><a href="${esc(url)}" target="_blank" rel="noopener">${esc(label)}</a></li>`).join('')}</ul></div>`;
+}
+
 function openDetail(html) {
   detail.innerHTML = html;
   detail.hidden = false;
@@ -610,7 +616,8 @@ function showPart(id, moveCamera = true) {
     ${p.specs.length ? `<table class="specs">${p.specs.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join('')}</table>` : ''}
     ${procs.length ? `<h3 class="group-title">Interventions</h3><ul class="list">${procs.map((pid) => procItem(procById(pid))).join('')}</ul>` : ''}
     ${partFasteners(id)}
-    ${pageButtons(p.pages, p.name)}`);
+    ${pageButtons(p.pages, p.name)}
+    ${sourceLinks(p.sources)}`);
 }
 
 function showProcedure(id, step = -1, moveCamera = true) {
@@ -647,6 +654,7 @@ function showProcedure(id, step = -1, moveCamera = true) {
         <button data-step="${i}"><span class="num">${i + 1}</span><span>${esc(s.t)}${fastenerChips(s)}</span></button>
       </li>`).join('')}</ol>
     ${pageButtons(p.pages, p.title)}
+    ${sourceLinks(p.sources)}
     <div class="step-bar">
       <button class="btn ghost" data-step="${state.step - 1}" ${state.step < 0 ? 'disabled' : ''}>Précédente</button>
       <span class="step-count">${state.step < 0 ? 'Vue d’ensemble' : `Étape ${state.step + 1} / ${p.steps.length}`}</span>
