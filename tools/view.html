@@ -26,7 +26,7 @@ scene.background = new THREE.Color(0x24211e);
 scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
 scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 0.5));
 const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(2, 4, 3); scene.add(sun);
-const camera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 0.01, 50);
+const camera = new THREE.PerspectiveCamera(+(q.get('fov') ?? 35), innerWidth / innerHeight, 0.01, 50);
 const t = (q.get('t') || '0.92,0.5,0').split(',').map(Number);
 const az = THREE.MathUtils.degToRad(+(q.get('az') ?? 40)), el = THREE.MathUtils.degToRad(+(q.get('el') ?? 25)), d = +(q.get('d') ?? 1.4);
 camera.position.set(t[0] + d * Math.cos(el) * Math.cos(az), t[1] + d * Math.sin(el), t[2] + d * Math.cos(el) * Math.sin(az));

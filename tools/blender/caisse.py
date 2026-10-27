@@ -480,6 +480,13 @@ for s in (1, -1):   # renforts sous le capot et charnières avant
     hood_frame.append(tube([(0.70, fender_top(0.70) - 0.004, s * 0.52), (1.20, fender_top(1.2) - 0.004, s * 0.55), (1.66, fender_top(1.66) - 0.004, s * 0.52)], 0.009, interieur, 'renfort'))
     hood_frame.append(box((0.04, 0.025, 0.03), (1.725, 0.83, s * 0.45), acier_noir, 0.004, 'charniere'))
     hood_frame.append(cyl(0.007, 0.05, (1.735, 0.82, s * 0.45), (0, 0, 1), acier, 12, name='axe'))
+# gouttières d'aile sous le joint capot / aile : on ne voit plus le moteur à travers le jeu
+hood_gutter = []
+for s in (1, -1):
+    sec = [(-0.016, -0.004), (-0.012, -0.024), (0.020, -0.026), (0.040, -0.006)]
+    g = grid([[(x, fender_top(x) + dy, s * (HW(x) + dz)) for x in lin(0.69, 1.70, 30)] for dz, dy in sec], interieur, 'gouttiere-aile')
+    solidify(g, 0.0015, 0.0)
+    hood_gutter.append(g)
 hood_frame.append(tube([(0.70, fender_top(0.70) + 0.005, -0.40), (0.70, fender_top(0.70) + 0.012, 0.0), (0.70, fender_top(0.70) + 0.005, 0.40)], 0.008, interieur, 'renfort-ar'))
 hood_frame.append(box((0.03, 0.02, 0.05), (0.69, fender_top(0.69) - 0.005, 0), acier_noir, 0.003, 'gache'))   # gâche de serrure
 
@@ -501,6 +508,8 @@ for k in range(11):
 # tablier (cloison moteur / habitacle), incliné vers l'auvent
 tab = extrude([(TABLIER_X, 0.38), (TABLIER_X, 0.86), (0.655, 1.028), (0.640, 1.028), (TABLIER_X - 0.006, 0.86), (TABLIER_X - 0.006, 0.38)], 1.12, (0, 0, 0), (0, 0, 1), peinture, 'tablier', up=(0, 1, 0))
 front_bits.append(tab)
+# insonorisant côté habitacle (feutre noir, sombre sur la photo du poste de conduite p. XVIII)
+front_bits.append(box((0.012, 0.44, 1.08), (TABLIER_X - 0.013, 0.615, 0), M('feutre', 0x1c1b1a, 0.0, 1.0), 0.004, 'insonorisant'))
 # ailes intérieures et passages de roue
 for s in (1, -1):
     wall = extrude([(TABLIER_X, 0.40), (1.745, 0.40), (1.745, 0.80), (1.60, fender_top(1.60) - 0.03), (1.0, fender_top(1.0) - 0.03), (TABLIER_X, fender_top(TABLIER_X) - 0.03)], 0.003, (0, 0, s * 0.556), (0, 0, 1), peinture, 'aile-int', up=(0, 1, 0))
@@ -737,24 +746,39 @@ for s in (1, -1):
     feux_fx['vis-feux-ar'] += [((x_rear(0.88) - 0.014, 0.88, s * 0.668), (-1, 0, 0)), ((x_rear(0.70) - 0.014, 0.70, s * 0.668), (-1, 0, 0))]
 
 # =====================================================================================
-# Essuie-glace : moteur derrière la planche de bord, deux bras au repos vers la gauche
+# Essuie-glace : moteur derrière la planche de bord ; d'après la photo RTA p. XVIII, axes à
+# gauche de chaque zone balayée (z -0,13 et +0,25), bras au repos vers la droite, relevés de 15°
 # =====================================================================================
 wiper_bits = []
-for zp in (-0.20, 0.13):
+WIPER_Z = (-0.13, 0.25)
+
+
+def on_ws(z, y):
+    return (x_ws(y) + 0.012, y, z)
+
+
+for zp in WIPER_Z:
     p0 = (0.655, 1.046, zp)
     wiper_bits.append(cyl(0.012, 0.03, p0, (0, 1, 0), plastique_noir, 16, name='axe-essuie'))
-    tip = (x_ws(1.09) + 0.012, 1.09, zp - 0.40)
-    wiper_bits.append(tube([p0, ((p0[0] + tip[0]) / 2 + 0.01, 1.07, (zp + tip[2]) / 2), tip], 0.0055, plastique_noir, 'bras'))
-    wiper_bits.append(tube([(x_ws(1.075) + 0.010, 1.075, zp - 0.62), (x_ws(1.095) + 0.012, 1.095, zp - 0.18)], 0.006, caoutchouc, 'balai'))
+    wiper_bits.append(cyl(0.016, 0.012, (0.652, 1.040, zp), (0, 1, 0), plastique_noir, 16, name='ecrou-axe'))
+    a = math.radians(15)
+    L = 0.36
+    pts = [on_ws(zp + t * L * math.cos(a), 1.060 + t * L * math.sin(a)) for t in (0.0, 0.5, 1.0)]
+    wiper_bits.append(tube([p0, pts[0], pts[1], pts[2]], 0.0055, plastique_noir, 'bras'))
+    # balai : 0,30 m centré sur le bout du bras, posé sur la glace
+    c = (zp + L * math.cos(a), 1.060 + L * math.sin(a))
+    ends = [on_ws(c[0] + d * 0.15 * math.cos(a), c[1] + d * 0.15 * math.sin(a)) for d in (-1, 1)]
+    wiper_bits.append(tube([(e[0] - 0.004, e[1], e[2]) for e in ends], 0.0035, caoutchouc, 'balai'))
+    wiper_bits.append(tube(ends, 0.004, plastique_noir, 'monture'))
 wiper_bits.append(box((0.08, 0.06, 0.10), (0.60, 0.97, 0.20), acier_noir, 0.01, 'moteur-essuie'))
-wiper_bits.append(tube([(0.60, 0.99, 0.20), (0.63, 1.02, 0.15), (0.655, 1.035, 0.13)], 0.004, acier, 'biellette'))
-wiper_bits.append(tube([(0.60, 0.99, 0.18), (0.64, 1.025, -0.05), (0.655, 1.035, -0.20)], 0.004, acier, 'biellette'))
+wiper_bits.append(tube([(0.60, 0.99, 0.20), (0.63, 1.02, 0.23), (0.655, 1.035, 0.25)], 0.004, acier, 'biellette'))
+wiper_bits.append(tube([(0.60, 0.99, 0.18), (0.64, 1.025, 0.02), (0.655, 1.035, -0.13)], 0.004, acier, 'biellette'))
 
 # =====================================================================================
 # Pièces du site
 # =====================================================================================
 pc = Part('caisse', (0, 0.25, 0))
-pc.add(lower, upper, roof, fender, *front_bits, *gutters, *q_seal, *strips_body, *filler, ws_seal)
+pc.add(lower, upper, roof, fender, *hood_gutter, *front_bits, *gutters, *q_seal, *strips_body, *filler, ws_seal)
 for name, _, s in DOORS:
     p = Part('portes', (0, 0, 0.6 * s))
     p.add(*door_skins[name], *door_extra[name])

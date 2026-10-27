@@ -600,3 +600,22 @@ def quad(center, w, h, normal, mat, name='quad'):
         loop[uv].uv = (u, v)
     o = _obj_from_bm(bm, name, mat)
     return o
+
+
+def uv_box(o, scale=1.0):
+    """UV par projection cubique (coordonnées monde × scale) : textures répétées (tissus…)."""
+    bpy.context.view_layer.update()
+    mw = o.matrix_world
+    bm = bmesh.new()
+    bm.from_mesh(o.data)
+    uv = bm.loops.layers.uv.get('UVMap') or bm.loops.layers.uv.new('UVMap')
+    for f in bm.faces:
+        n = mw.to_3x3() @ f.normal
+        ax = max(range(3), key=lambda i: abs(n[i]))
+        a, b = [(1, 2), (0, 2), (0, 1)][ax]
+        for lp in f.loops:
+            w = mw @ lp.vert.co
+            lp[uv].uv = (w[a] * scale, w[b] * scale)
+    bm.to_mesh(o.data)
+    bm.free()
+    return o
