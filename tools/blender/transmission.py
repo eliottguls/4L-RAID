@@ -193,12 +193,14 @@ fasteners(cab, 'reglage-embrayage', [((LEV[0] - 0.008, LEV[1], LEV[2]), (-1, 0, 
 ce = Part('carter-embrayage', (0.3, 0.32, 0))
 bell = lathe([(0.135, 0.0), (0.175, 0.0), (0.178, 0.008), (0.17, 0.05), (0.15, 0.10), (0.13, 0.12), (0.125, 0.12), (0.145, 0.10), (0.162, 0.05), (0.168, 0.008), (0.135, 0.008)],
              (XF + 0.006, YP + 0.035, 0), (1, 0, 0), alu, 56)
-# fenêtre du démarreur (côté droit, en bas) et lumière du levier de fourchette
-for c in (cyl(0.05, 0.2, (XF + 0.04, YP - 0.06, 0.15), (0, 0, 1), None, 24), box((0.05, 0.06, 0.08), (XBU + 0.024, YP - 0.11, 0.1), None)):
+# fenêtre du démarreur (côté GAUCHE, sous le collecteur : RTA p.73) et lumière du levier de fourchette
+for c in (cyl(0.038, 0.07, (XF + 0.04, 0.412, -0.141), (1, 0, 0), None, 28), box((0.05, 0.06, 0.08), (XBU + 0.024, YP - 0.11, 0.1), None)):
     boolean(bell, c)
     apply_all(bell)
     delete(c)
 ce.add(bell)
+# bossage du démarreur : manchon venu de fonderie qui enveloppe le nez du démarreur (côté gauche)
+ce.add(lathe([(0.0375, 0.0), (0.045, 0.0), (0.045, 0.060), (0.040, 0.066), (0.0375, 0.066)], (XF + 0.006, 0.412, -0.141), (1, 0, 0), alu, 32, 'bossage-demarreur'))
 front = lathe([(0.03, -0.004), (0.127, -0.004), (0.127, 0.004), (0.03, 0.004)], (XF + 0.122, YP + 0.035, 0), (1, 0, 0), alu, 56)
 c = cyl(0.03, 0.05, (XF + 0.122, YP, 0), (1, 0, 0), None, 24)
 boolean(front, c)
