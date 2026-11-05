@@ -555,6 +555,23 @@ export const PROCEDURES = [
     ],
   },
   {
+    id: 'reniflard', title: 'Contrôler le reniflard d’huile (double circuit)', system: 'alimentation',
+    keywords: ['reniflard', 'réaspiration', 'vapeurs d’huile', 'dégazage', 'simple circuit', 'double circuit', 'ajuteur', 'gicleur calibré', 'huile dans le filtre à air', 'ralenti instable', 'durite'],
+    difficulty: 1, duration: '20 min', interval: 'À chaque vidange, ou si de l’huile est dans le filtre à air ou si le ralenti est instable',
+    warning: 'Ne jamais retirer l’ajuteur (petit gicleur calibré) de la petite durite : sans lui, le moteur aspire trop d’air au ralenti, tourne mal et peut s’abîmer.',
+    tools: ['Tournevis', 'Pince à colliers'], supplies: ['Kit durites de reniflard Cléon 1100 (si fissurées)', 'Colliers'], torques: [], pages: [22], parts: ['filtre-air', 'carburateur'],
+    sources: [['Kit durites de reniflard Cléon 1100 pour 4L à carburateur 28 IF, avec ajuteur (vehicules-anciens.fr)', 'https://vehicules-anciens.fr/en/shop/breather-assembly-kit-for-1100-4l-engine-va13401-68829'], ['Kit reniflard Cléon 1100 : rôle de l’ajuteur (vehicules-anciens.fr)', 'https://vehicules-anciens.fr/cleon-1100-engine-breather-kit-for-renault-r4-4l-with-28if-carburetor-includes-manifold-hose-air-adjuster-calibration-black-color-kit/']],
+    steps: [
+      { t: 'Réponse : sur le Cléon 688 de la GTL, le reniflard est à DOUBLE circuit. Les vapeurs d’huile sortent du moteur par le cache-culbuteurs et un raccord en Y les partage entre deux durites.', focus: ['filtre-air'] },
+      { t: 'Circuit 1, grosse durite (sans ajuteur) : vers le filtre à air, avant le carburateur. Elle évacue l’essentiel des vapeurs quand le moteur tire (forte charge, papillon ouvert).', focus: ['filtre-air'] },
+      { t: 'Circuit 2, petite durite (avec ajuteur calibré dedans) : vers le pied du carburateur, sous le papillon. Au ralenti la dépression y est forte : elle aspire les vapeurs, et l’ajuteur limite le débit pour ne pas fausser le ralenti.', focus: ['carburateur'] },
+      { t: 'Déposer le couvercle du filtre à air. Des traces d’huile dans le boîtier sont normales en petite quantité ; beaucoup d’huile = moteur qui « souffle » (segmentation usée) ou reniflard bouché.', remove: ['filtre-air'] },
+      { t: 'Débrancher les deux durites, vérifier qu’elles ne sont ni fendues, ni écrasées, ni bouchées par de la « mayonnaise » (boue d’huile). Nettoyer le Y et les raccords.', focus: ['carburateur'] },
+      { t: 'Vérifier que l’ajuteur est bien présent dans la petite durite. Si tu changes les durites, récupère-le sur l’ancienne et remets-le dans la neuve.', focus: ['carburateur'] },
+      { t: 'Rebrancher avec des colliers neufs, reposer le filtre à air, puis vérifier le ralenti (voir l’intervention « Régler le ralenti »).', focus: ['filtre-air'] },
+    ],
+  },
+  {
     id: 'joint-culasse', title: 'Déposer la culasse et changer le joint de culasse', system: 'moteur',
     keywords: ['culasse', 'joint de culasse', 'surchauffe', 'eau dans l’huile', 'mayonnaise', 'resserrage'],
     difficulty: 3, duration: '1 jour', interval: 'En cas de joint de culasse claqué',
