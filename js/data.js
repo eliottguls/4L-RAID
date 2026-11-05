@@ -539,6 +539,22 @@ export const PROCEDURES = [
     ],
   },
   {
+    id: 'identifier-carbu', title: 'Identifier le carburateur (simple ou double corps)', system: 'alimentation',
+    keywords: ['carburateur', 'carbu', 'simple corps', 'double corps', 'double circuit', 'zenith', 'solex', 'weber', '28 IF', '32 SEIA', 'plaque', 'référence', 'identifier'],
+    difficulty: 1, duration: '5 min', interval: 'Avant d’acheter un kit de joints, des gicleurs ou un carburateur',
+    tools: ['Tournevis (couvercle du filtre à air)', 'Lampe'], supplies: [], torques: [], pages: [22, 26], parts: ['carburateur', 'filtre-air'],
+    sources: [['Forum Renault 4 (renault4.co.uk) : la GTL reçoit le Zenith 28 IF de série', 'https://www.renault4.co.uk/forum/threads/4gtl-carb.2728'], ['Carburateurs 4L Billancourt et Cléon 1100 (vehicules-anciens.fr)', 'https://vehicules-anciens.fr/shop/carburetor-4l']],
+    steps: [
+      { t: 'Réponse : la 4L GTL (type R1128, moteur Cléon 688 1108 cm³) a un carburateur SIMPLE corps. D’origine c’est un Zenith 28 IF (version V 050 78 sur le 688 D7 12) ; certaines voitures ont reçu un Solex 32 SEIA (repère 729), lui aussi simple corps. Aucune 4L n’a eu de double corps d’usine.', focus: ['carburateur'] },
+      { t: 'Ce que ça veut dire : un « corps » est le conduit vertical où passe l’air et où le papillon dose le mélange. Simple corps = un seul conduit et un seul papillon. Double corps = deux conduits côte à côte, deux papillons (le 2e s’ouvre en fin de course de l’accélérateur) (ex. Weber 32 DIR sur des moteurs plus puissants).', focus: ['carburateur'] },
+      { t: 'Ne pas confondre avec les « circuits » : même un simple corps a plusieurs circuits internes (ralenti, principal, starter, pompe de reprise sur le Solex). On parle de double corps seulement s’il y a deux conduits.', focus: ['carburateur'] },
+      { t: 'Vérifier sur la voiture : déposer le filtre à air (écrou ou vis du couvercle) et regarder dans l’entrée du carburateur.', remove: ['filtre-air'] },
+      { t: 'Une seule ouverture ronde (environ 28 à 32 mm) avec un seul volet de départ en haut = simple corps. Deux ouvertures rondes côte à côte = double corps (carburateur non d’origine).', focus: ['carburateur'] },
+      { t: 'Lire la référence : plaque alu rivée ou chiffres frappés sur la cuve ou la bride (« ZENITH 28 IF » + n° de version, ou « SOLEX 32 SEIA » + repère). La noter pour commander les pièces.', focus: ['carburateur'] },
+      { t: 'Reposer le filtre à air.', focus: ['filtre-air'] },
+    ],
+  },
+  {
     id: 'joint-culasse', title: 'Déposer la culasse et changer le joint de culasse', system: 'moteur',
     keywords: ['culasse', 'joint de culasse', 'surchauffe', 'eau dans l’huile', 'mayonnaise', 'resserrage'],
     difficulty: 3, duration: '1 jour', interval: 'En cas de joint de culasse claqué',
