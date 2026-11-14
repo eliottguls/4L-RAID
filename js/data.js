@@ -120,7 +120,7 @@ export const PARTS = {
   bloc: {
     name: 'Bloc-moteur (carter-cylindres)', system: 'moteur',
     desc: 'Moteur 4 temps, 4 cylindres en ligne, longitudinal, placé en arrière de l’essieu avant. Chemises humides amovibles, vilebrequin 5 paliers. Cylindre n° 1 côté volant moteur (embrayage).',
-    specs: [['Type', '688 D7 12'], ['Cylindrée', '1 108 cm³'], ['Alésage × course', '70 × 72 mm'], ['Puissance', '34 ch DIN à 4 000 tr/min'], ['Rapport volumétrique', '9,5 à 1'], ['Paliers de vilebrequin', '5,5 à 6,5 m.daN'], ['Chapeaux de bielle', '4 m.daN']],
+    specs: [['Type', '688 D7 12'], ['Cylindrée', '1 108 cm³'], ['Alésage × course', '70 × 72 mm'], ['Puissance', '34 ch DIN à 4 000 tr/min'], ['Rapport volumétrique', '9,5 à 1'], ['Pression de compression', '12 kg/cm² ≈ 11,8 bar (RTA)'], ['Paliers de vilebrequin', '5,5 à 6,5 m.daN'], ['Chapeaux de bielle', '4 m.daN']],
     pages: [20, 21, 31, 32, 33, 34, 35],
   },
   culasse: {
@@ -600,6 +600,27 @@ export const PROCEDURES = [
       { t: 'Placer l’arrêtoir et serrer la vis du pignon : 2 m.daN (vis de 20 mm, rondelle de 4 mm, arrêtoir) ou 3 m.daN (vis de 30 mm, rondelle de 5 mm, sans arrêtoir). Rabattre l’arrêtoir.', focus: ['chaine-distribution'] },
       { t: 'Monter le tendeur et sa plaque d’appui (2 vis). Clé six pans de 3 mm dans le cylindre de retenue : tourner dans le sens des aiguilles d’une montre jusqu’à ce que le patin se projette sur la chaîne. Bloquer et freiner la vis du cylindre.', focus: ['chaine-distribution'] },
       { t: 'Reposer le carter de distribution avec un joint liège neuf, puis le joint avant d’arbre à cames avec la bague de l’outil Mot. 500-01.', refit: ['distribution'] },
+    ],
+  },
+  {
+    id: 'compression', title: 'Mesurer la compression des cylindres', system: 'moteur',
+    keywords: ['compression', 'compressiomètre', 'cylindres', 'segments', 'soupapes', 'joint de culasse', 'usure moteur', 'pression', 'bougies'],
+    difficulty: 1, duration: '30 min', interval: 'Avant le raid, et en cas de perte de puissance, de fumée bleue ou de consommation d’huile',
+    tools: ['Compressiomètre à embout vissé (filetage de bougie 14 × 1,25)', 'Clé à bougie', 'Burette d’huile moteur'],
+    supplies: [],
+    torques: [['Bougies (culasse alu)', 'à la main jusqu’au contact puis 1/4 à 1/2 tour']],
+    pages: [20, 23], parts: ['bougies', 'culasse', 'bloc'],
+    warning: 'Valeur constructeur 688.12 (GTL) : 12 kg/cm², soit environ 11,8 bar, rapport volumétrique 9,5 à 1 (RTA p. 6). Le 688.11 de la F6 donne 11,5 kg/cm² à 8,3 à 1. Le MR 175 ne donne pas de pression de compression (il donne seulement le rapport volumétrique 8,3 du 688.11, page B-24) et renvoie au manuel moteur séparé. L’écart entre cylindres et les conditions de mesure ne figurent dans aucun des deux manuels : les valeurs ci-dessous sont la pratique d’atelier courante.',
+    steps: [
+      { t: 'Faire chauffer le moteur jusqu’à sa température normale, puis l’arrêter. Batterie bien chargée : un démarreur qui tourne lentement fausse la mesure.', focus: ['bloc'] },
+      { t: 'Couper l’allumage : débrancher le fil central de la bobine et le mettre à la masse (ne pas le laisser en l’air).', focus: ['bobine'] },
+      { t: 'Repérer les fils (ordre d’allumage 1-3-4-2, cylindre n° 1 côté volant) et déposer les 4 bougies. Culasse en alu : dévisser doucement, moteur juste tiède si un filetage force.', remove: ['bougies'] },
+      { t: 'Visser l’embout du compressiomètre dans le trou de bougie du cylindre n° 1.', focus: ['culasse'] },
+      { t: 'Accélérateur enfoncé à fond (papillon grand ouvert), starter repoussé. Actionner le démarreur pendant 4 à 6 compressions, jusqu’à ce que l’aiguille ne monte plus. Noter la valeur.', focus: ['carburateur'] },
+      { t: 'Relâcher la pression du compressiomètre et recommencer sur les cylindres 2, 3 et 4, toujours avec le même nombre de compressions.', focus: ['culasse'] },
+      { t: 'Interpréter (pratique courante) : environ 11 à 12 bar = moteur sain ; écart entre le cylindre le plus fort et le plus faible 10 % maxi (environ 1 à 1,2 bar), au-delà de 15 % il y a un défaut ; sous 9 bar, cylindre usé.', focus: ['bloc'] },
+      { t: 'Si un cylindre est bas : verser une cuillère à café d’huile moteur par son trou de bougie et refaire la mesure. La pression remonte = segments ou chemise usés. Elle ne bouge pas = soupape qui fuit (vérifier d’abord le jeu aux culbuteurs). Deux cylindres voisins bas = joint de culasse probable.', focus: ['chemises-pistons', 'culasse'] },
+      { t: 'Reposer les bougies (écartement 0,55 à 0,65 mm), les fils dans le bon ordre et le fil central de la bobine.', refit: ['bougies'] },
     ],
   },
   {
