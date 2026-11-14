@@ -486,14 +486,16 @@ export const PROCEDURES = [
     keywords: ['bougie', 'bougies', 'allumage', 'ratés', 'démarrage'],
     difficulty: 1, duration: '20 min', interval: 'Tous les 15 000 km environ',
     tools: ['Clé à bougie', 'Cale d’épaisseur ou jauge à fil'], supplies: ['4 bougies AC 43 F ou Champion L 92 Y (ou équivalent moderne)'],
-    torques: [['Bougies (culasse alu)', 'à la main jusqu’au contact puis 1/4 à 1/2 tour']],
+    torques: [['Bougies 14 mm à joint plat (culasse alu)', '2 à 2,5 m.daN (20 à 25 N·m) ; sans clé dynamométrique : au contact puis 1/2 tour si neuve, 1/12 de tour si réutilisée']],
     pages: [23, 25], parts: ['bougies'],
+    warning: 'Ni la RTA (tableau des couples p. 23) ni le MR 175 (tableau bougies C-6) ne donnent de couple de serrage des bougies. La valeur retenue vient des tableaux des fabricants pour une bougie de 14 mm à joint plat dans une culasse en alliage d’aluminium (RTA : « culasse en alliage d’aluminium coulé en coquille ») : NGK 20 à 30 N·m, Denso 20 à 25 N·m. Ne pas prendre les 25 à 35 N·m donnés pour une culasse en fonte : le bloc Cléon est en fonte, mais pas la culasse.',
+    sources: [['NGK : couples de serrage des bougies (PDF)', 'https://www.ngkntk.com/fileadmin/france/downloads/ft/ngk_4w_ba_mestutos1_couple_de_serrage.pdf'], ['Denso : poster technique bougies (PDF, couple et angle)', 'https://assets.denso-am.eu/production/attachments/Spark-Plug-Technical-Poster-English.pdf']],
     steps: [
       { t: 'Moteur froid (culasse alu : ne jamais démonter à chaud). Repérer les fils de bougies : ordre d’allumage 1-3-4-2, cylindre n° 1 côté volant.', focus: ['bougies', 'allumeur'] },
       { t: 'Débrancher les fils en tirant sur les capuchons, pas sur le câble.', focus: ['bougies'] },
       { t: 'Dévisser les bougies avec la clé.', remove: ['bougies'] },
       { t: 'Régler l’écartement des électrodes des bougies neuves : 0,55 à 0,65 mm.', focus: ['bougies'] },
-      { t: 'Visser à la main pour ne pas fausser le filetage, puis serrer modérément. Rebrancher les fils dans le bon ordre.', focus: ['bougies'] },
+      { t: 'Visser à la main jusqu’au contact pour ne pas fausser le filetage (culasse alu), sans graisse ni anti-grippant. Serrer à 2 à 2,5 m.daN, ou à défaut de clé dynamométrique 1/2 tour après le contact pour une bougie neuve (le joint s’écrase), 1/12 de tour pour une bougie réutilisée. Rebrancher les fils dans le bon ordre.', focus: ['bougies'] },
     ],
   },
   {
@@ -608,7 +610,7 @@ export const PROCEDURES = [
     difficulty: 1, duration: '30 min', interval: 'Avant le raid, et en cas de perte de puissance, de fumée bleue ou de consommation d’huile',
     tools: ['Compressiomètre à embout vissé (filetage de bougie 14 × 1,25)', 'Clé à bougie', 'Burette d’huile moteur'],
     supplies: [],
-    torques: [['Bougies (culasse alu)', 'à la main jusqu’au contact puis 1/4 à 1/2 tour']],
+    torques: [['Bougies 14 mm à joint plat (culasse alu)', '2 à 2,5 m.daN (20 à 25 N·m) ; sans clé dynamométrique : au contact puis 1/2 tour si neuve, 1/12 de tour si réutilisée']],
     pages: [20, 23], parts: ['bougies', 'culasse', 'bloc'],
     warning: 'Valeur constructeur 688.12 (GTL) : 12 kg/cm², soit environ 11,8 bar, rapport volumétrique 9,5 à 1 (RTA p. 6). Le 688.11 de la F6 donne 11,5 kg/cm² à 8,3 à 1. Le MR 175 ne donne pas de pression de compression (il donne seulement le rapport volumétrique 8,3 du 688.11, page B-24) et renvoie au manuel moteur séparé. L’écart entre cylindres et les conditions de mesure ne figurent dans aucun des deux manuels : les valeurs ci-dessous sont la pratique d’atelier courante.',
     steps: [
