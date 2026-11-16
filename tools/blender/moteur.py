@@ -19,6 +19,15 @@
 # Ce qui n'est pas coté dans la RTA (entraxe des cylindres, formes de fonderie) est estimé d'après
 # les vues éclatées.
 #
+# Section transversale recalée sur la coupe du MR 175 (page B-21, « Moteur 688 — Coupe », PDF
+# manuels/MR175-mecanique-p001-350.pdf p.34), mise à l'échelle sur l'alésage de 70 mm : plan de
+# joint à 188 mm au-dessus de l'axe du vilebrequin, carter-cylindres de 159 mm de large au plan de
+# joint (84 mm côté arbre à cames, 75 mm côté collecteur), jupe évasée jusqu'à un plan de joint de
+# carter inférieur à l'axe du vilebrequin (238 mm de large), arbre à cames à 116 mm au-dessus et
+# 77 mm sur le côté de l'axe, culasse de 153 mm de large, cache-culbuteurs en dôme de 114 mm,
+# carter inférieur profond de 134 mm, décalé côté arbre à cames. Coupe longitudinale B-20 (p.33) :
+# entraxe des cylindres ≈ 78-80 mm, pompe à eau en bout de culasse côté volant, chaîne à l'opposé.
+#
 # Implantation (comme sur la 4L) : moteur longitudinal derrière l'essieu, volant et embrayage vers
 # l'avant (boîte devant), distribution par chaîne vers l'habitacle, arbre à cames côté droit
 # (allumeur, pompe à essence, filtre à huile), collecteur et bougies côté gauche, pompe à eau et
@@ -38,11 +47,14 @@ YC = 0.40                 # axe du vilebrequin
 PITCH = 0.080             # entraxe des cylindres (estimé)
 CX = [EX + 0.12, EX + 0.04, EX - 0.04, EX - 0.12]   # cylindre n° 1 côté volant (avant)
 BORE, STROKE, ROD = 0.070, 0.072, 0.128
-YD = 0.596                # plan de joint du bloc
+YD = YC + 0.188           # plan de joint du bloc (MR 175 B-21)
 HEAD_H = 0.072
 YH = YD + 0.0015 + HEAD_H  # dessus de culasse (joint 1,5 mm)
 XF, XR = EX + 0.185, EX - 0.185   # faces avant (volant) et arrière (distribution) du bloc
-CAM_Z, CAM_Y = 0.074, YC + 0.088  # arbre à cames latéral, côté droit
+CAM_Z, CAM_Y = 0.077, YC + 0.116  # arbre à cames latéral, côté droit (MR 175 B-21)
+ZB_CAM, ZB_COL = 0.084, -0.075    # flancs du carter-cylindres au plan de joint (côté arbre à cames / collecteur)
+ZH_CAM, ZH_COL = 0.081, -0.072    # flancs de la culasse
+ZC = (ZB_CAM + ZB_COL) / 2        # milieu du plan de joint
 # Manivelles : 1 et 4 au PMH, 2 et 3 au PMB
 CRANK_ANGLE = [0, math.pi, math.pi, 0]
 
@@ -75,16 +87,21 @@ def X(i):
 # CARTER-CYLINDRES (planche 6)
 # =====================================================================================
 bloc = Part('bloc', (0, 0.2, 0))
-# Corps : partie haute (chemises humides, chambre d'eau) et jupe jusqu'à 45 mm sous l'axe.
-body = box((XF - XR, YD - (YC - 0.045), 0.205), (EX, (YD + YC - 0.045) / 2, -0.004), fonte, bev=0.006)
+# Corps : section relevée sur la coupe MR 175 B-21 (z, hauteur au-dessus de l'axe) : flanc côté
+# arbre à cames bombé par la galerie, jupe évasée vers le plan de joint du carter inférieur, posé
+# à l'axe du vilebrequin ; côté collecteur plus droit.
+BLOCK_SEC = [(ZB_CAM, 0.188), (0.088, 0.172), (0.100, 0.150), (0.102, 0.116), (0.100, 0.090), (0.090, 0.068),
+             (0.092, 0.045), (0.112, 0.024), (0.136, 0.008), (0.138, -0.005), (-0.100, -0.005), (-0.100, 0.008),
+             (-0.092, 0.030), (-0.081, 0.075), (-0.078, 0.150), (ZB_COL, 0.188)]
+body = extrude([(-z, h) for z, h in BLOCK_SEC], XF - XR, (EX, YC, 0), (1, 0, 0), fonte, bev=0.004, up=(0, 1, 0))
 # chambre des chemises : ouverte en haut (chemises humides), alésages d'embase
-water = box((XF - XR - 0.03, 0.15, 0.17), (EX, YD - 0.075 + 0.001, -0.004), None)
+water = box((XF - XR - 0.03, 0.15, 0.135), (EX, YD - 0.075 + 0.001, ZC), None)
 boolean(body, water)
 apply_all(body)
 delete(water)
 bloc.add(body)
 # Plan de joint usiné, percé des 4 chemises
-deck = extrude(rounded_rect(XF - XR, 0.205, 0.006), 0.006, (EX, YD - 0.003, -0.004), (0, 1, 0), fonte_usinee)
+deck = extrude(rounded_rect(XF - XR, ZB_CAM - ZB_COL, 0.006), 0.006, (EX, YD - 0.003, ZC), (0, 1, 0), fonte_usinee)
 for i in range(4):
     c = cyl(0.0405, 0.05, (X(i), YD, 0), (0, 1, 0), None, 40)
     boolean(deck, c)
@@ -93,33 +110,33 @@ for i in range(4):
 bloc.add(deck)
 # Nervures verticales côté gauche (entre cylindres) et côté droit
 for x in [XF - 0.005, X(0) - PITCH / 2, X(1) - PITCH / 2, X(2) - PITCH / 2, XR + 0.005]:
-    bloc.add(box((0.012, 0.20, 0.014), (x, YD - 0.12, -0.108), fonte, bev=0.003))
+    bloc.add(box((0.012, 0.11, 0.010), (x, YD - 0.075, ZB_COL - 0.007), fonte, bev=0.003))
 # Galerie d'arbre à cames côté droit et bossages des poussoirs
-bloc.add(cyl(0.026, XF - XR - 0.01, (EX, CAM_Y, CAM_Z + 0.022), (1, 0, 0), fonte, 28))
-bloc.add(box((XF - XR - 0.02, 0.06, 0.03), (EX, CAM_Y + 0.035, CAM_Z + 0.03), fonte, bev=0.005))
+bloc.add(cyl(0.026, XF - XR - 0.01, (EX, CAM_Y, CAM_Z), (1, 0, 0), fonte, 28))
+bloc.add(box((XF - XR - 0.02, 0.05, 0.03), (EX, CAM_Y + 0.035, CAM_Z + 0.01), fonte, bev=0.005))
 # Bossage d'allumeur / pompe à huile (arrière droit), de filtre et de pompe à essence
 bloc.add(cyl(0.022, 0.05, (EX - 0.13, CAM_Y + 0.07, CAM_Z + 0.032), (0, 1, 0), fonte, 24))
 bloc.add(cyl(0.038, 0.03, (EX - 0.075, YC + 0.035, 0.112), (0, 0, 1), fonte, 32))   # portée de filtre
 bloc.add(cyl(0.030, 0.012, (EX - 0.075, YC + 0.035, 0.128), (0, 0, 1), fonte_usinee, 32))
-bloc.add(box((0.06, 0.05, 0.02), (EX + 0.03, CAM_Y - 0.02, 0.112), fonte, bev=0.004))     # pompe à essence
+bloc.add(box((0.06, 0.05, 0.02), (EX + 0.03, CAM_Y - 0.02, 0.105), fonte, bev=0.004))     # pompe à essence
 # Paliers de vilebrequin vus de dessous (5 cloisons)
 for x in [XF - 0.012, X(0) - PITCH / 2, EX, X(2) - PITCH / 2, XR + 0.012]:
     bloc.add(box((0.022, 0.03, 0.17), (x, YC + 0.005, 0), fonte, bev=0.003))
 # Bouchons de dessablage (pastilles) côté gauche
 for x in (X(0) - 0.02, X(3) + 0.02):
-    bloc.add(cyl(0.016, 0.006, (x, YD - 0.085, -0.108), (0, 0, 1), acier_noir, 24))
+    bloc.add(cyl(0.016, 0.006, (x, YD - 0.085, ZB_COL - 0.005), (0, 0, 1), acier_noir, 24))
 # Supports moteur (planche 4) : pattes et tampons obliques
 for s in (1, -1):
-    bloc.add(box((0.07, 0.06, 0.03), (EX - 0.04, YC + 0.06, s * 0.118), fonte, bev=0.006))
+    bloc.add(box((0.07, 0.06, 0.075), (EX - 0.04, YC + 0.06, s * 0.115), fonte, bev=0.006))
     bloc.add(box((0.09, 0.008, 0.07), (EX - 0.04, YC + 0.035, s * 0.15), acier_noir, bev=0.002))
     bloc.add(cyl(0.028, 0.045, (EX - 0.04, YC + 0.0, s * 0.175), (0, -0.6, s), caoutchouc, 20))
 # Manocontact de pression d'huile côté gauche (p.37)
-bloc.add(extrude(hexagon(0.011), 0.01, (EX - 0.10, CAM_Y - 0.02, -0.112), (0, 0, -1), acier))
-bloc.add(cyl(0.010, 0.022, (EX - 0.10, CAM_Y - 0.02, -0.128), (0, 0, -1), noir, 16))
+bloc.add(extrude(hexagon(0.011), 0.01, (EX - 0.10, CAM_Y - 0.02, -0.083), (0, 0, -1), acier))
+bloc.add(cyl(0.010, 0.022, (EX - 0.10, CAM_Y - 0.02, -0.099), (0, 0, -1), noir, 16))
 bloc.add(lathe([(0.040, -0.0065), (0.050, -0.0065), (0.050, 0.0065), (0.046, 0.0065), (0.041, 0.002), (0.040, 0.002)],
               (XF - 0.004, YC, 0), (1, 0, 0), caoutchouc, 40, 'joint-vilebrequin'))   # 80 × 100 × 13
 bloc.add(lathe([(0.015, -0.004), (0.021, -0.004), (0.021, 0.004), (0.015, 0.004)], (XF - 0.004, CAM_Y, CAM_Z), (1, 0, 0), caoutchouc, 24, 'joint-aac'))   # 30 × 42 × 8
-fastener(bloc, 'bouchon-vidange-bloc', (EX + 0.03, YC + 0.045, -0.106), (0, 0, -1), kind='plug', r=0.008, length=0.02, travel=0.05)
+fastener(bloc, 'bouchon-vidange-bloc', (EX + 0.03, YC + 0.045, -0.090), (0, 0, -1), kind='plug', r=0.008, length=0.02, travel=0.05)
 # Vis d'assemblage boîte / moteur autour de la face avant
 fix_b = []
 for a in (30, 90, 150, 210, 270, 330):
@@ -307,7 +324,7 @@ for x, adm in VALVES:
 # JOINT DE CULASSE
 # =====================================================================================
 jc = Part('joint-culasse', (0, 0.45, 0))
-gasket = extrude(rounded_rect(XF - XR - 0.004, 0.2, 0.01), 0.0015, (EX, YD + 0.00075, -0.004), (0, 1, 0), joint_cul)
+gasket = extrude(rounded_rect(XF - XR - 0.004, ZB_CAM - ZB_COL - 0.004, 0.01), 0.0015, (EX, YD + 0.00075, ZC), (0, 1, 0), joint_cul)
 for i in range(4):
     c = cyl(0.036, 0.02, (X(i), YD, 0), (0, 1, 0), None, 36)
     boolean(gasket, c)
@@ -321,9 +338,9 @@ for i in range(4):
 # CULASSE (planche 5)
 # =====================================================================================
 cul = Part('culasse', (0, 0.55, 0))
-hb = box((XF - XR + 0.006, HEAD_H, 0.21), (EX, YD + 0.0015 + HEAD_H / 2, -0.004), alu, bev=0.005)
+hb = box((XF - XR + 0.006, HEAD_H, ZH_CAM - ZH_COL), (EX, YD + 0.0015 + HEAD_H / 2, (ZH_CAM + ZH_COL) / 2), alu, bev=0.005)
 # chambre des culbuteurs : creusée dans le dessus
-pocket = box((XF - XR - 0.02, 0.03, 0.15), (EX, YH, 0.0), None)
+pocket = box((XF - XR - 0.02, 0.03, 0.11), (EX, YH, 0.002), None)
 boolean(hb, pocket)
 apply_all(hb)
 delete(pocket)
@@ -339,21 +356,21 @@ for x, seat, rh, rs in SEATS:   # sièges rapportés (fonte spéciale, emmanché
     cul.add(lathe([(rh - 0.002, 0.0), (rs, 0.0), (rs, 0.0045), (rh - 0.0005, 0.0045)], (x, seat - 0.0005, VALVE_Z), (0, 1, 0), M('fonte-siege', 0x6b6f72, 0.6, 0.5), 32, 'siege'))
 # Nervures et bossages latéraux (côté gauche : conduits ; côté droit : passages de tiges)
 for i in range(4):
-    cul.add(box((0.05, 0.034, 0.012), (X(i), YD + 0.035, -0.111), alu, bev=0.004))   # brides d'échappement
+    cul.add(box((0.05, 0.034, 0.012), (X(i), YD + 0.035, ZH_COL - 0.005), alu, bev=0.004))   # brides d'échappement
 for x in (EX + 0.08, EX - 0.08):
-    cul.add(box((0.05, 0.03, 0.012), (x, YD + 0.06, -0.111), alu, bev=0.004))           # brides d'admission (siamoises)
+    cul.add(box((0.05, 0.03, 0.012), (x, YD + 0.06, ZH_COL - 0.005), alu, bev=0.004))           # brides d'admission (siamoises)
 for i in range(4):  # puits de bougies côté gauche
-    cul.add(cyl(0.012, 0.03, (X(i), YD + 0.03, -0.1), (0, 0.35, -1), alu, 20))
-for i in range(5):
-    cul.add(box((0.008, HEAD_H - 0.01, 0.008), (XR + 0.02 + i * 0.0825, YD + 0.038, 0.104), alu, bev=0.002))
+    cul.add(cyl(0.012, 0.03, (X(i), YD + 0.03, ZH_COL + 0.008), (0, 0.35, -1), alu, 20))
+for i in range(5):  # nervures verticales côté tiges de culbuteurs (vue MR 175 B-23)
+    cul.add(box((0.008, HEAD_H - 0.01, 0.008), (XR + 0.02 + i * 0.0825, YD + 0.038, ZH_CAM + 0.002), alu, bev=0.002))
 # sortie d'eau vers la pompe, côté volant
 cul.add(box((0.02, 0.05, 0.08), (XF + 0.008, YD + 0.04, 0.02), alu, bev=0.005))
 # goujons du cache-culbuteurs
 for x in (EX + 0.06, EX - 0.06):
-    cul.add(cyl(0.0035, 0.10, (x, YH + 0.04, -0.03), (0, 1, 0), acier, 10))
+    cul.add(cyl(0.0035, 0.11, (x, YH + 0.04, -0.01), (0, 1, 0), acier, 10))
 # Vis de culasse : rangée gauche 7 5 2 4 10, rangée droite 9 3 1 6 8 (de l'avant vers l'arrière)
 HBX = [EX + 0.16, EX + 0.08, EX, EX - 0.08, EX - 0.16]
-hbolts = [((x, YH - 0.012, -0.072), (0, 1, 0)) for x in HBX] + [((x, YH - 0.012, 0.062), (0, 1, 0)) for x in HBX]
+hbolts = [((x, YH - 0.012, -0.050), (0, 1, 0)) for x in HBX] + [((x, YH - 0.012, 0.062), (0, 1, 0)) for x in HBX]
 fasteners(cul, 'vis-culasse', hbolts, r=0.0095, length=0.105, travel=0.17)
 fastener(cul, 'thermocontact', (XR - 0.002, YD + 0.05, 0.04), (-1, 0, 0), kind='bolt', r=0.009, length=0.015, travel=0.04)
 
@@ -363,37 +380,44 @@ fastener(cul, 'thermocontact', (XR - 0.002, YD + 0.05, 0.04), (-1, 0, 0), kind='
 cc = Part('cache-culbuteurs', (0, 0.85, 0))
 XCC = XF - XR - 0.012
 # carter allongé : profil (z, y) extrudé le long de x, extrémités arrondies par biseau
-prof = [(-0.088, 0.0), (0.088, 0.0), (0.087, 0.012), (0.083, 0.04), (0.072, 0.056), (0.05, 0.064), (-0.05, 0.064), (-0.072, 0.056), (-0.083, 0.04), (-0.087, 0.012)]
-cover = extrude(prof, XCC, (EX, YH + 0.002, -0.004), (1, 0, 0), rouge, bev=0.012, up=(0, 1, 0))
+# dôme étroit de la coupe MR 175 B-21 : flancs presque droits puis dessus arrondi (114 mm de large)
+prof = [(-0.058, 0.0), (0.058, 0.0), (0.058, 0.026), (0.055, 0.046), (0.047, 0.060), (0.032, 0.070), (0.012, 0.074),
+        (-0.012, 0.074), (-0.032, 0.070), (-0.047, 0.060), (-0.055, 0.046), (-0.058, 0.026)]
+cover = extrude(prof, XCC, (EX, YH + 0.004, 0.002), (1, 0, 0), rouge, bev=0.010, up=(0, 1, 0))
 cc.add(cover)
-for k in range(3):   # nervures latérales (planche 5)
+cc.add(box((XCC + 0.012, 0.004, 0.128), (EX, YH + 0.003, 0.002), rouge, bev=0.0015))   # rebord de pose
+for k in range(4):   # nervures longitudinales des flancs (vue MR 175 B-23)
     for s in (1, -1):
-        cc.add(box((XCC - 0.05, 0.004, 0.004), (EX, YH + 0.012 + k * 0.012, -0.004 + s * 0.087), rouge, bev=0.0015))
-cc.add(box((XCC + 0.008, 0.005, 0.184), (EX, YH + 0.0025, -0.004), joint, bev=0.0015))   # joint
-cc.add(cyl(0.024, 0.008, (EX - 0.10, YH + 0.068, 0.02), (0, 1, 0), rouge, 28))           # embase du bouchon
-cc.add(cyl(0.009, 0.03, (EX + 0.12, YH + 0.045, 0.085), (0.3, 0.5, 1), noir, 14))         # reniflard
-fasteners(cc, 'fix-cache-culbuteurs', [((x, YH + 0.067, -0.03), (0, 1, 0)) for x in (EX + 0.06, EX - 0.06)], kind='nut', r=0.0065, length=0.01, travel=0.05)
-fastener(cc, 'bouchon-remplissage-huile', (EX - 0.10, YH + 0.072, 0.02), (0, 1, 0), kind='screw', r=0.024, length=0.012, travel=0.06)
+        cc.add(box((XCC - 0.05, 0.004, 0.004), (EX, YH + 0.012 + k * 0.011, 0.002 + s * 0.0585), rouge, bev=0.0015))
+cc.add(box((XCC + 0.012, 0.003, 0.126), (EX, YH + 0.0015, 0.002), joint, bev=0.001))   # joint
+cc.add(cyl(0.024, 0.008, (EX - 0.10, YH + 0.078, 0.012), (0, 1, 0), rouge, 28))           # embase du bouchon
+cc.add(cyl(0.009, 0.03, (EX + 0.12, YH + 0.045, 0.062), (0.3, 0.5, 1), noir, 14))         # reniflard
+fasteners(cc, 'fix-cache-culbuteurs', [((x, YH + 0.077, -0.01), (0, 1, 0)) for x in (EX + 0.06, EX - 0.06)], kind='nut', r=0.0065, length=0.01, travel=0.05)
+fastener(cc, 'bouchon-remplissage-huile', (EX - 0.10, YH + 0.082, 0.012), (0, 1, 0), kind='screw', r=0.024, length=0.012, travel=0.06)
 
 # =====================================================================================
 # CARTER INFÉRIEUR (planche 6) : tôle emboutie, bouchon de vidange
 # =====================================================================================
 sump = Part('carter-huile', (0, -0.45, 0))
-YS = YC - 0.045
-sprof = [(-0.105, 0.0), (0.105, 0.0), (0.104, -0.01), (0.10, -0.02), (0.095, -0.115), (0.085, -0.125), (-0.085, -0.125), (-0.095, -0.115), (-0.10, -0.02), (-0.104, -0.01)]
-pan = extrude(sprof, XF - XR - 0.012, (EX, YS, -0.004), (1, 0, 0), tole, bev=0.015, up=(0, 1, 0))
+# coupe MR 175 B-21 : plan de joint à l'axe du vilebrequin, cuve profonde de 134 mm décalée côté
+# arbre à cames (de -82 à +122 mm), large rebord de pose (-100 à +138 mm)
+YS = YC - 0.005
+SZ0, SZ1 = -0.082, 0.122
+sprof = [(-0.100, 0.0), (0.138, 0.0), (0.138, -0.004), (SZ1 + 0.004, -0.008), (SZ1, -0.016), (SZ1, -0.112), (SZ1 - 0.022, -0.134),
+         (SZ0 + 0.022, -0.134), (SZ0, -0.112), (SZ0, -0.016), (SZ0 - 0.004, -0.008), (-0.100, -0.004)]
+pan = extrude([(-z, h) for z, h in sprof], XF - XR - 0.012, (EX, YS, 0), (1, 0, 0), tole, bev=0.010, up=(0, 1, 0))
 sump.add(pan)
-sump.add(box((XF - XR + 0.004, 0.004, 0.222), (EX, YS - 0.002, -0.004), tole, bev=0.001))   # rebord
+sump.add(box((XF - XR + 0.004, 0.004, 0.238), (EX, YS - 0.002, 0.019), tole, bev=0.001))   # rebord
 for k in range(2):   # bossages d'emboutissage
-    for s in (1, -1):
-        sump.add(box((XF - XR - 0.08, 0.008, 0.006), (EX, YS - 0.05 - k * 0.03, -0.004 + s * 0.0975), tole, bev=0.003))
-sump.add(box((XF - XR + 0.004, 0.003, 0.226), (EX, YS + 0.0015, -0.004), joint))
-fastener(sump, 'bouchon-vidange', (EX - 0.06, YS - 0.125, 0.02), (0, -1, 0), kind='plug', r=0.011, length=0.016, travel=0.08)
+    for zz in (SZ1 + 0.0005, SZ0 - 0.0005):
+        sump.add(box((XF - XR - 0.08, 0.008, 0.006), (EX, YS - 0.05 - k * 0.03, zz), tole, bev=0.003))
+sump.add(box((XF - XR + 0.004, 0.003, 0.240), (EX, YS + 0.0015, 0.019), joint))
+fastener(sump, 'bouchon-vidange', (EX - 0.06, YS - 0.134, 0.02), (0, -1, 0), kind='plug', r=0.011, length=0.016, travel=0.08)
 sv = []
 for k in range(7):
     x = XR + 0.015 + k * (XF - XR - 0.03) / 6
-    for s in (1, -1):
-        sv.append(((x, YS - 0.004, -0.004 + s * 0.108), (0, -1, 0)))
+    for zz in (0.130, -0.092):
+        sv.append(((x, YS - 0.004, zz), (0, -1, 0)))
 fasteners(sump, 'vis-carter-huile', sv, r=0.005, length=0.015, travel=0.03)
 
 # =====================================================================================
@@ -467,7 +491,7 @@ fasteners(ch, 'vis-tendeur-chaine', [((XD - 0.006, YC + 0.035, -0.045 + s * 0.01
 fasteners(ch, 'vis-pignon-aac', [((XD - 0.004, CAM_Y + s * 0.012, CAM_Z), (-1, 0, 0)) for s in (1, -1)], r=0.005, length=0.02, travel=0.04)
 
 dist = Part('distribution', (-0.35, 0.1, 0))
-dprof = [(-0.09, -0.06), (0.09, -0.06), (0.11, 0.0), (0.12, 0.08), (0.11, 0.15), (0.06, 0.165), (-0.05, 0.155), (-0.09, 0.11), (-0.10, 0.04)]
+dprof = [(-0.09, -0.06), (0.09, -0.06), (0.12, 0.0), (0.128, 0.08), (0.125, 0.15), (0.08, 0.18), (-0.05, 0.17), (-0.085, 0.12), (-0.095, 0.04)]
 dc = extrude([(z, y) for z, y in dprof], 0.022, (XR - 0.025, YC, 0), (-1, 0, 0), tole, bev=0.008, up=(0, 1, 0))
 dist.add(dc)
 for k in range(5):   # nervures du carter
@@ -499,14 +523,14 @@ col = Part('echappement', (0, 0.0, -0.35))
 fonte_ech = M('fonte-echappement', 0x4b4845, 0.5, 0.65)
 for i in range(4):   # pipes d'échappement vers la descente
     x = X(i)
-    col.add(tube([(x, YD + 0.035, -0.115), (x, YD + 0.03, -0.14), (EX + (x - EX) * 0.35, YD - 0.02, -0.16), (EX + 0.02, YD - 0.08, -0.16)], 0.016, fonte_ech, seg=12, res=6))
+    col.add(tube([(x, YD + 0.035, ZH_COL - 0.010), (x, YD + 0.03, -0.14), (EX + (x - EX) * 0.35, YD - 0.02, -0.16), (EX + 0.02, YD - 0.08, -0.16)], 0.016, fonte_ech, seg=12, res=6))
 col.add(cyl(0.024, 0.06, (EX + 0.02, YD - 0.10, -0.16), (0, 1, 0), fonte_ech, 24))
 col.add(cyl(0.035, 0.008, (EX + 0.02, YD - 0.13, -0.16), (0, 1, 0), fonte_ech, 24))   # bride de descente
-col.add(tube([(EX - 0.08, YD + 0.06, -0.12), (EX - 0.05, YD + 0.085, -0.16), (EX, YD + 0.09, -0.175), (EX + 0.05, YD + 0.085, -0.16), (EX + 0.08, YD + 0.06, -0.12)], 0.017, alu, seg=12, res=8))
+col.add(tube([(EX - 0.08, YD + 0.06, ZH_COL - 0.010), (EX - 0.05, YD + 0.085, -0.16), (EX, YD + 0.09, -0.175), (EX + 0.05, YD + 0.085, -0.16), (EX + 0.08, YD + 0.06, ZH_COL - 0.010)], 0.017, alu, seg=12, res=8))
 col.add(cyl(0.03, 0.03, (EX, YD + 0.095, -0.175), (0, 1, 0), alu, 28))   # pipe d'admission sous le carburateur
 col.add(box((0.16, 0.004, 0.07), (EX + 0.02, YD - 0.035, -0.205), M('tole-alu', 0xc7cccf, 0.8, 0.35), bev=0.001))   # tôle pare-chaleur
-col.add(box((XF - XR - 0.04, 0.07, 0.004), (EX, YD + 0.045, -0.1135), joint))   # joint de collecteur
-ec = [((x, YD + y, -0.123), (0, 0, -1)) for x, y in ((EX + 0.16, 0.05), (EX + 0.08, 0.025), (EX, 0.05), (EX - 0.08, 0.025), (EX - 0.16, 0.05), (EX, 0.015))]
+col.add(box((XF - XR - 0.04, 0.07, 0.004), (EX, YD + 0.045, ZH_COL - 0.0125), joint))   # joint de collecteur
+ec = [((x, YD + y, ZH_COL - 0.021), (0, 0, -1)) for x, y in ((EX + 0.16, 0.05), (EX + 0.08, 0.025), (EX, 0.05), (EX - 0.08, 0.025), (EX - 0.16, 0.05), (EX, 0.015))]
 fasteners(col, 'ecrous-collecteur', ec, kind='nut', r=0.007, length=0.03, travel=0.05)
 
 # =====================================================================================
@@ -554,7 +578,7 @@ fastener(dl, 'fix-allumeur', (DX, DY0 + 0.007, DZ + 0.03), (0, 1, 0), r=0.006, l
 bg = Part('bougies', (0, 0.25, -0.4))
 plug_specs = []
 for i in range(4):
-    p = (X(i), YD + 0.04, -0.112)
+    p = (X(i), YD + 0.04, ZH_COL - 0.004)
     plug_specs.append((p, (0, 0.35, -1)))
 fasteners(bg, 'bougies', plug_specs, kind='spark', r=0.0105, length=0.07, travel=0.10)
 # fils d'allumage : tête d'allumeur → bougies (passent au-dessus du cache-culbuteurs)
@@ -571,15 +595,15 @@ ign.add(tube([(DX, DY0 + 0.16, DZ), (DX + 0.05, DY0 + 0.22, DZ + 0.12), (0.86, 0
 # POMPE À ESSENCE (mécanique, côté droit) et FILTRE À HUILE
 # =====================================================================================
 pe = Part('pompe-essence', (0, 0, 0.4))
-pe.add(box((0.05, 0.04, 0.018), (EX + 0.03, CAM_Y - 0.02, 0.13), alu, bev=0.004))
-pe.add(cyl(0.035, 0.03, (EX + 0.03, CAM_Y - 0.02, 0.155), (0, 0, 1), alu, 32))
-pe.add(cyl(0.038, 0.006, (EX + 0.03, CAM_Y - 0.02, 0.155), (0, 0, 1), acier, 32))
-pe.add(cyl(0.025, 0.012, (EX + 0.03, CAM_Y - 0.02, 0.176), (0, 0, 1), acier, 28))
+pe.add(box((0.05, 0.04, 0.018), (EX + 0.03, CAM_Y - 0.02, 0.105), alu, bev=0.004))
+pe.add(cyl(0.035, 0.03, (EX + 0.03, CAM_Y - 0.02, 0.130), (0, 0, 1), alu, 32))
+pe.add(cyl(0.038, 0.006, (EX + 0.03, CAM_Y - 0.02, 0.130), (0, 0, 1), acier, 32))
+pe.add(cyl(0.025, 0.012, (EX + 0.03, CAM_Y - 0.02, 0.151), (0, 0, 1), acier, 28))
 for s in (1, -1):
-    pe.add(cyl(0.004, 0.02, (EX + 0.03 + s * 0.02, CAM_Y + 0.01, 0.16), (0, 1, 0), alu, 10))
-pe.add(tube([(EX + 0.05, CAM_Y + 0.02, 0.16), (EX + 0.04, YD + 0.06, 0.13), (EX + 0.03, YH + 0.07, 0.0), (EX + 0.04, CY + 0.03, -0.14)], 0.0035, caoutchouc, seg=6))
-pe.add(tube([(EX + 0.01, CAM_Y + 0.02, 0.16), (EX + 0.005, CAM_Y + 0.045, 0.20), (EX - 0.005, CAM_Y + 0.063, 0.24), (EX - 0.015, CAM_Y + 0.067, 0.25)], 0.0035, caoutchouc, seg=6))   # arrivée du filtre à essence (soubassement.py)
-fasteners(pe, 'fix-pompe-essence', [((EX + 0.03 + s * 0.02, CAM_Y - 0.02, 0.139), (0, 0, 1)) for s in (1, -1)], kind='nut', r=0.006, length=0.02, travel=0.04)
+    pe.add(cyl(0.004, 0.02, (EX + 0.03 + s * 0.02, CAM_Y + 0.01, 0.135), (0, 1, 0), alu, 10))
+pe.add(tube([(EX + 0.05, CAM_Y + 0.02, 0.135), (EX + 0.04, YD + 0.06, 0.13), (EX + 0.03, YH + 0.07, 0.0), (EX + 0.04, CY + 0.03, -0.14)], 0.0035, caoutchouc, seg=6))
+pe.add(tube([(EX + 0.01, CAM_Y + 0.02, 0.135), (EX + 0.005, CAM_Y + 0.045, 0.20), (EX - 0.005, CAM_Y + 0.063, 0.24), (EX - 0.015, CAM_Y + 0.067, 0.25)], 0.0035, caoutchouc, seg=6))   # arrivée du filtre à essence (soubassement.py)
+fasteners(pe, 'fix-pompe-essence', [((EX + 0.03 + s * 0.02, CAM_Y - 0.02, 0.114), (0, 0, 1)) for s in (1, -1)], kind='nut', r=0.006, length=0.02, travel=0.04)
 
 fh = Part('filtre-huile', (0, -0.05, 0.45))
 filt = lathe([(0.0, 0.0), (0.04, 0.0), (0.046, 0.006), (0.046, 0.09), (0.042, 0.098), (0.0, 0.1)], (0, 0, 0), (0, 1, 0), bleu, 40)

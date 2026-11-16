@@ -27,8 +27,8 @@ EX = 0.92
 XF = EX + 0.185
 TABLIER_X = 0.700
 PUL_X = XF + 0.07                    # plan des poulies (côté embrayage)
-CAM = (0.488, 0.074, 0.050)          # poulie d'arbre à cames (y, z, r) — voir moteur.py
-WP = (0.626, 0.020, 0.060)           # poulie de pompe à eau
+CAM = (0.516, 0.077, 0.050)          # poulie d'arbre à cames (y, z, r) — voir moteur.py
+WP = (0.618, 0.020, 0.060)           # poulie de pompe à eau
 ALT = (0.665, 0.225, 0.036)          # poulie d'alternateur
 
 alu = M('alu-coule', 0xb9bcba, 0.55, 0.5)
