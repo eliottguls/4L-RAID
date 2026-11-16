@@ -32,7 +32,7 @@ export const PARTS = {
   caisse: {
     name: 'Caisse', system: 'carrosserie',
     desc: 'Carrosserie boulonnée sur le cadre plancher (plateforme). Berline 5 portes, 4 places (type R 1128).',
-    specs: [['Longueur', '3 668 mm'], ['Largeur', '1 509 mm'], ['Hauteur à vide', '1 550 mm'], ['Poids à vide', '720 kg'], ['Référence peinture', 'côté d’auvent droit']],
+    specs: [['Longueur', '3 668 mm'], ['Largeur hors tout', '1 485 mm (MR 175 A-2 ; la RTA donne 1 509 mm)'], ['Empattement', '2 449 mm à droite, 2 401 mm à gauche'], ['Hauteur à vide', '1 550 mm'], ['Poids à vide', '720 kg'], ['Référence peinture', 'côté d’auvent droit']],
     pages: [79, 19],
   },
   plateforme: {

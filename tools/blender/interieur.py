@@ -14,6 +14,7 @@ import tempfile
 from PIL import Image
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from cotes import ROOF_HW, X_ROOF_F, X_ROOF_R, roof_y, z_glass  # noqa: E402
 from lib import M, M_img, Part, uv_box, bevel, box, smooth, cyl, export, extrude, fastener, fasteners, grid, lathe, orient, reset, rounded_rect, torus, tube  # noqa: E402
 
 reset()
@@ -109,14 +110,14 @@ yb = FLOOR + 0.345
 bq.add(cushion((-0.72, yb - 0.055, 0), 1.20, 0.43, 0.11, tissu, 'assise'))
 for z in (-0.30, 0.30):
     bq.add(cushion((-0.71, yb - 0.003, z), 0.44, 0.33, 0.012, tissu, 'motif'))
-back = cushion((-0.98, yb + 0.29, 0), 1.24, 0.10, 0.58, tissu, 'dossier')
+back = cushion((-0.98, yb + 0.29, 0), 1.20, 0.10, 0.58, tissu, 'dossier')
 back.rotation_mode = 'XYZ'
 back.rotation_euler = (0, -0.22, 0)
 bq.add(back)
 bq.add(tube([(-0.52, yb - 0.11, -0.58), (-0.92, yb - 0.11, -0.58), (-0.92, yb - 0.11, 0.58), (-0.52, yb - 0.11, 0.58)], 0.011, tube_m, seg=8))
 for s in (1, -1):
     bq.add(tube([(-0.92, yb - 0.11, s * 0.60), (-0.94, yb + 0.20, s * 0.63), (-1.02, yb + 0.30, s * 0.64)], 0.008, acier, seg=8))   # barrettes
-    bq.add(cyl(0.018, 0.02, (-1.02, yb + 0.30, s * 0.645), (0, 0, s), noir, 16))   # bouton cranté (B)
+    bq.add(cyl(0.018, 0.02, (-1.02, yb + 0.30, s * 0.615), (0, 0, s), noir, 16))   # bouton cranté (B)
     bq.add(box((0.04, 0.04, 0.03), (-0.56, FLOOR + 0.03, s * 0.55), acier_noir, 0.005, 'charniere'))
 
 # =====================================================================================
@@ -130,7 +131,7 @@ prof = [(0.636, 1.010), (0.560, 1.013), (0.515, 1.007), (0.500, 0.990), (0.500, 
         (0.508, 0.842), (0.530, 0.836), (0.636, 0.838)]
 pb.add(extrude(prof, 1.30, (0, 0, 0), (0, 0, 1), planche, 'panneau', bev=0.010, up=(0, 1, 0)))
 for s_ in (1, -1):   # joues arrondies contre les montants de pare-brise
-    pb.add(cyl(0.085, 0.03, (0.56, 0.925, s_ * 0.655), (0, 0, 1), planche, 28, name='joue', bev=0.008))
+    pb.add(cyl(0.085, 0.03, (0.56, 0.925, s_ * 0.625), (0, 0, 1), planche, 28, name='joue', bev=0.008))
 pb.add(box((0.018, 0.004, 1.10), (0.590, 1.0135, 0), noir, 0.0015, 'fente-desembuage'))
 for z in (-0.60, 0.60):
     pb.add(box((0.04, 0.005, 0.07), (0.585, 1.013, z), noir, 0.002, 'aerateur'))
@@ -180,12 +181,12 @@ pb.add(box((0.020, 0.008, 0.43), (0.505, 0.866, 0.355), planche, 0.003, 'rebord-
 pb.add(cyl(0.010, 0.04, (0.52, 0.825, -0.56), (1, 0, 0), noir, 12, name='starter'))
 pb.add(cyl(0.015, 0.012, (0.50, 0.825, -0.56), (1, 0, 0), chrome, 16, name='bouton-starter'))
 # rétroviseur intérieur (rectangle arrondi large) au haut du pare-brise
-pb.add(tube([(0.37, 1.465, 0.0), (0.39, 1.43, 0.0)], 0.005, noir))
-pb.add(extrude(rounded_rect(0.20, 0.055, 0.025), 0.022, (0.395, 1.405, 0.0), (1, 0, 0), noir, 'retro-int', bev=0.004))
-pb.add(extrude(rounded_rect(0.188, 0.045, 0.02), 0.002, (0.383, 1.405, 0.0), (1, 0, 0), reflecteur, 'miroir'))
+pb.add(tube([(0.335, 1.432, 0.0), (0.345, 1.395, 0.0)], 0.005, noir))
+pb.add(extrude(rounded_rect(0.20, 0.055, 0.025), 0.022, (0.350, 1.370, 0.0), (1, 0, 0), noir, 'retro-int', bev=0.004))
+pb.add(extrude(rounded_rect(0.188, 0.045, 0.02), 0.002, (0.338, 1.370, 0.0), (1, 0, 0), reflecteur, 'miroir'))
 # pare-soleil
 for z in (-0.33, 0.33):
-    pb.add(box((0.20, 0.012, 0.34), (0.26, 1.46, z), M('pare-soleil', 0x8a8178, 0.0, 0.9), 0.005, 'pare-soleil'))
+    pb.add(box((0.20, 0.012, 0.34), (0.24, 1.418, z), M('pare-soleil', 0x8a8178, 0.0, 0.9), 0.005, 'pare-soleil'))
 fasteners(pb, 'vis-planche', [((0.499, 0.99, -0.60), (-1, 0, 0)), ((0.499, 0.99, 0.60), (-1, 0, 0)), ((0.507, 0.845, -0.05), (-1, 0, 0)), ((0.507, 0.845, 0.20), (-1, 0, 0))], kind='screw', r=0.005, length=0.025, travel=0.04)
 
 # =====================================================================================
@@ -318,12 +319,12 @@ ce_fx = []
 for s_ in (1, -1):
     for xp, zw, xb, zb, yb in ((-0.215, 0.675, -0.12, 0.10, 0.60), (-0.905, 0.665, -0.70, 0.12, 0.47)):
         z_ = s_ * zw
-        enr, ren, anc = (xp, 0.47, z_), (xp + 0.01, 1.24, z_), (xp + 0.17, FLOOR + 0.035, s_ * (zw - 0.02))
+        enr, ren, anc = (xp, 0.47, z_), (xp + 0.01, 1.24, s_ * (z_glass(1.24) - 0.022)), (xp + 0.17, FLOOR + 0.035, s_ * (zw - 0.02))
         ce.add(box((0.07, 0.10, 0.045), enr, plast_ce, 0.01, 'enrouleur'))
         ce.add(box((0.05, 0.06, 0.012), ren, plast_ce, 0.008, 'renvoi'))
-        ce.add(strap((ren[0], ren[1] - 0.02, z_ - s_ * 0.008), (enr[0], enr[1] + 0.05, z_ - s_ * 0.008), normal=(0, 0, 1)))
+        ce.add(strap((ren[0], ren[1] - 0.02, ren[2] - s_ * 0.008), (enr[0], enr[1] + 0.05, z_ - s_ * 0.008), normal=(0, 0, 1)))
         lg = (xp + 0.035, 0.70, z_ - s_ * 0.012)      # languette rangée au crochet du montant
-        ce.add(strap((ren[0] + 0.005, ren[1] - 0.03, z_ - s_ * 0.012), lg, normal=(0, 0, 1)))
+        ce.add(strap((ren[0] + 0.005, ren[1] - 0.03, ren[2] - s_ * 0.012), lg, normal=(0, 0, 1)))
         ce.add(strap(lg, (anc[0], anc[1] + 0.01, anc[2] - s_ * 0.004), normal=(0, 0, 1)))
         ce.add(box((0.03, 0.06, 0.006), lg, chrome, 0.003, 'languette'))
         ce.add(box((0.02, 0.025, 0.012), (lg[0], lg[1] + 0.03, z_ - s_ * 0.004), plast_ce, 0.004, 'crochet'))
@@ -333,7 +334,7 @@ for s_ in (1, -1):
         ce.add(tube([(xb, FLOOR + 0.03, bz), (xb + 0.02, yb - 0.08, bz)], 0.009, plast_ce, 'tige-boucle', seg=8))
         ce.add(box((0.05, 0.07, 0.025), (xb + 0.025, yb, bz), plast_ce, 0.008, 'boucle'))
         ce.add(box((0.018, 0.01, 0.012), (xb + 0.025, yb + 0.03, bz), M('bouton-rouge', 0xb8302a, 0.1, 0.5), 0.003, 'bouton'))
-        ce_fx += [((enr[0], enr[1] - 0.04, z_ - s_ * 0.025), (0, 0, -s_)), ((ren[0], ren[1], z_ - s_ * 0.008), (0, 0, -s_)),
+        ce_fx += [((enr[0], enr[1] - 0.04, z_ - s_ * 0.025), (0, 0, -s_)), ((ren[0], ren[1], ren[2] - s_ * 0.008), (0, 0, -s_)),
                   ((anc[0], anc[1] + 0.008, anc[2]), (0, 1, 0)), ((xb, FLOOR + 0.012, bz), (0, 1, 0))]
 fasteners(ce, 'vis-ceintures', ce_fx, r=0.009, length=0.025, travel=0.04)
 
@@ -354,22 +355,29 @@ ga = Part('garnitures', (0, 0.3, 0))
 ciel_m = M('ciel-pavillon', 0xb9b3a6, 0.0, 0.95)
 
 
-def ciel_y(z):
-    return 1.493 + 0.048 * (1 - (z / 0.665) ** 2) - 0.012
+def ciel_y(z, x=-0.5):
+    """Ciel de pavillon : 16 mm sous la tôle (cotes.roof_y), jamais sous l'arête des gouttières."""
+    return max(roof_y(x, z), roof_y(-0.5, ROOF_HW) + 0.004) - 0.016
 
 
-xs = [0.40 - k * 1.75 / 24 for k in range(25)]
-zs = [-0.64 + k * 1.28 / 16 for k in range(17)]
-P = [[(x, ciel_y(z) - 0.004 * math.sin(math.pi * ((0.40 - x) / 1.75 * 5 % 1)), z) for z in zs] for x in xs]
+XC0, XC1 = X_ROOF_F - 0.035, X_ROOF_R + 0.035
+LC = XC0 - XC1
+xs = [XC0 - k * LC / 24 for k in range(25)]
+zs = [-(ROOF_HW - 0.035) + k * 2 * (ROOF_HW - 0.035) / 16 for k in range(17)]
+P = [[(x, ciel_y(z, x) - 0.004 * math.sin(math.pi * ((XC0 - x) / LC * 5 % 1)), z) for z in zs] for x in xs]
 ga.add(orient(grid(P, ciel_m, 'ciel', smooth_angle=80), inside=(-0.5, 2.5, 0.0)))   # face visible vers l'habitacle
 for k in range(1, 5):     # arceaux (coutures transversales)
-    x = 0.40 - k * 1.75 / 5
-    ga.add(tube([(x, ciel_y(z) - 0.002, z) for z in zs], 0.0025, ciel_m, 'couture', seg=6, res=4))
-for x, z in ((0.10, 0.62), (-0.62, 0.62), (-0.62, -0.62)):
+    x = XC0 - k * LC / 5
+    ga.add(tube([(x, ciel_y(z, x) - 0.002, z) for z in zs], 0.0025, ciel_m, 'couture', seg=6, res=4))
+# poignées de maintien au-dessus des portes, sur le flanc de pavillon (rentré : cotes.z_glass)
+YP = 1.412
+ZP = z_glass(YP) - 0.016
+HANDLES = ((0.10, ZP), (-0.62, ZP), (-0.62, -ZP))
+for x, z in HANDLES:
     s_ = 1 if z > 0 else -1
-    ga.add(tube([(x - 0.11, 1.452, z), (x - 0.10, 1.41, z - s_ * 0.025), (x + 0.10, 1.41, z - s_ * 0.025), (x + 0.11, 1.452, z)], 0.010, noir, 'poignee-maintien', seg=10, res=8))
+    ga.add(tube([(x - 0.11, YP - 0.002, z), (x - 0.10, YP - 0.042, z - s_ * 0.03), (x + 0.10, YP - 0.042, z - s_ * 0.03), (x + 0.11, YP - 0.002, z)], 0.010, noir, 'poignee-maintien', seg=10, res=8))
     for dx in (-0.11, 0.11):
-        ga.add(box((0.03, 0.012, 0.03), (x + dx, 1.455, z), noir, 0.004, 'pied-poignee'))
-fasteners(ga, 'vis-poignees', [((x + dx, 1.448, z), (0, -1, 0)) for x, z in ((0.10, 0.62), (-0.62, 0.62), (-0.62, -0.62)) for dx in (-0.11, 0.11)], kind='screw', r=0.004, length=0.015, travel=0.02)
+        ga.add(box((0.03, 0.012, 0.03), (x + dx, YP, z), noir, 0.004, 'pied-poignee'))
+fasteners(ga, 'vis-poignees', [((x + dx, YP - 0.007, z), (0, -1, 0)) for x, z in HANDLES for dx in (-0.11, 0.11)], kind='screw', r=0.004, length=0.015, travel=0.02)
 
 export(OUT)
