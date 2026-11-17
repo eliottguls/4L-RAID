@@ -17,7 +17,6 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from cotes import roof_y, x_rear, z_glass  # noqa: E402
 from lib import M, Part, box, cyl, export, extrude, fastener, fasteners, lathe, reset, rounded_rect, sphere, torus, tube  # noqa: E402
 
 reset()
@@ -83,15 +82,16 @@ branch(fa, [(1.70, 0.80, 0.38), (1.73, 0.62, 0.32), (1.73, 0.50, 0.30)], 2, (0.0
 branch(fa, [(1.725, 0.80, 0.08), (1.66, 0.72, 0.06), (1.64, 0.66, 0.05)], 2, (0.02, 0.02, 0.02))                  # moto-ventilateur
 branch(fa, [(1.725, 0.80, 0.22), (1.72, 0.60, 0.21), (1.70, 0.505, 0.20)], 1, (0.015, 0.015, 0.015))             # thermo-contact radiateur
 branch(fa, [(1.05, 0.83, 0.53), (1.03, 0.76, 0.36), (1.005, 0.70, 0.26)], 3, (0.02, 0.015, 0.025), (0, 1, 0))    # régulateur / alternateur
-branch(fa, [(0.96, 0.84, 0.52), (0.98, 0.62, 0.40), (1.0, 0.43, 0.25), (1.0, 0.41, 0.22)], 2, (0.015, 0.015, 0.015))   # démarreur (solénoïde)
+branch(fa, [(1.12, 0.83, -0.53), (1.07, 0.66, -0.32), (1.03, 0.52, -0.20), (1.016, 0.472, -0.158)], 1, (0.012, 0.012, 0.008))   # démarreur (cosse du solénoïde, côté gauche)
 branch(fa, [(0.76, 0.87, 0.28), (0.76, 0.84, 0.22), (0.75, 0.82, 0.20)], 2, (0.015, 0.015, 0.015))               # bobine
 branch(fa, [(0.74, 0.86, 0.04), (0.74, 0.74, 0.04), (0.735, 0.66, 0.04)], 1, (0.012, 0.012, 0.012))              # thermo-contact culasse (23)
-branch(fa, [(0.76, 0.86, -0.46), (0.75, 0.60, -0.30), (0.78, 0.50, -0.16), (EX - 0.10, 0.496, -0.112)], 1, (0.012, 0.012, 0.012))   # mano-contact (21), côté gauche du bloc (moteur.py, RTA p.37)
+branch(fa, [(0.86, 0.86, -0.50), (0.84, 0.70, -0.32), (0.83, 0.52, -0.19), (EX - 0.10, 0.496, -0.110)], 1, (0.012, 0.012, 0.008))   # mano-contact (21), côté gauche
 branch(fa, [(0.86, 0.86, -0.48), (0.86, 0.84, -0.45), (TABLIER_X + 0.15, 0.82, -0.43)], 2, (0.012, 0.012, 0.012))  # contacteur stop (52)
 branch(fa, [(1.20, 0.83, -0.53), (1.36, 0.66, -0.20), (1.40, 0.56, -0.10)], 2, (0.015, 0.012, 0.012))             # feux de recul (72)
 fa.add(cyl(0.022, 0.012, (TABLIER_X + 0.006, 0.86, -0.30), (1, 0, 0), caoutchouc, 20, name='passe-fil'))
 harness(fa, [(TABLIER_X + 0.01, 0.86, -0.30), (0.66, 0.84, -0.28), (0.60, 0.83, -0.25)], 0.0085)                  # vers le tableau de bord
-# le mano-contact de pression d'huile (21) lui-même est modélisé sur le bloc (moteur.py)
+# mano-contact de pression d'huile (21) : sur le flanc GAUCHE du carter-cylindres (RTA p.23,
+# « déposer le manocontact (côté gauche du carter-cylindres) ») ; il est modélisé avec le bloc (moteur.py)
 # tresse de masse moteur → caisse
 fa.add(tube([(1.10, 0.36, -0.20), (1.12, 0.38, -0.30), (1.15, 0.40, -0.38)], 0.004, tresse, 'tresse-masse', seg=6))
 fastener(fa, 'tresse-masse', (1.15, 0.40, -0.385), (0, 0, -1), r=0.006, length=0.02, travel=0.03)
@@ -103,15 +103,14 @@ fastener(fa, 'tresse-masse', (1.15, 0.40, -0.385), (0, 0, -1), r=0.006, length=0
 fb = Part('faisceau-arriere', (0, 0.15, -0.25))
 fb.add(box((0.04, 0.03, 0.025), (0.56, 0.78, -0.56), nylon, 0.003, 'bloc-raccord'))
 B_ = [(0.56, 0.78, -0.56), (0.54, 0.60, -0.62), (0.45, 0.40, -0.625), (0.0, 0.392, -0.625), (-0.55, 0.392, -0.625),
-      (-0.80, 0.50, -0.60), (-1.30, 0.52, -0.58), (x_rear(0.62) + 0.05, 0.62, -0.56), (x_rear(0.70) + 0.03, 0.70, -0.40), (x_rear(0.70) + 0.03, 0.70, 0.40), (x_rear(0.62) + 0.05, 0.62, 0.56)]
+      (-0.80, 0.50, -0.60), (-1.30, 0.52, -0.58), (-1.70, 0.62, -0.56), (-1.765, 0.70, -0.40), (-1.765, 0.70, 0.40), (-1.70, 0.62, 0.56)]
 harness(fb, B_, 0.0055, 6)
 for s in (1, -1):
-    branch(fb, [(x_rear(0.62) + 0.05, 0.62, s * 0.56), (x_rear(0.70) + 0.05, 0.70, s * 0.58), (x_rear(0.78) + 0.04, 0.78, s * 0.565)], 3, (0.02, 0.025, 0.02))   # feux AR (68, 69)
-branch(fb, [(x_rear(0.70) + 0.03, 0.70, 0.0), (x_rear(0.72) + 0.015, 0.72, 0.0)], 2, (0.02, 0.012, 0.03))                                        # éclaireur de plaque (70)
+    branch(fb, [(-1.70, 0.62, s * 0.56), (-1.76, 0.72, s * 0.62), (-1.77, 0.80, s * 0.635)], 3, (0.02, 0.025, 0.02))   # feux AR (68, 69)
+branch(fb, [(-1.765, 0.70, 0.0), (-1.80, 0.62, 0.0)], 2, (0.02, 0.012, 0.03))                                        # éclaireur de plaque (70)
 branch(fb, [(-0.80, 0.50, -0.60), (-0.90, 0.47, -0.30), (-0.92, 0.45, 0.06), (-0.92, 0.45, 0.10)], 2, (0.012, 0.012, 0.012))   # jauge (65)
-branch(fb, [(x_rear(0.62) + 0.05, 0.62, -0.56), (x_rear(0.95) + 0.05, 0.95, -0.52), (x_rear(1.06) + 0.04, 1.06, -0.42)], 2, (0.012, 0.012, 0.02))             # lunette dégivrante (66)
-harness(fb, [(0.54, 0.80, -0.60), (0.50, 1.10, -(z_glass(1.10) - 0.025)), (0.40, 1.38, -(z_glass(1.38) - 0.02)), (0.25, roof_y(0.25, 0.45) - 0.008, -0.45),
-             (0.0, roof_y(0.0, 0.20) - 0.008, -0.20), (-0.04, roof_y(-0.04, 0.03) - 0.008, -0.03)], 0.004)   # vers le plafonnier
+branch(fb, [(-1.70, 0.62, -0.56), (-1.66, 0.95, -0.60), (-1.62, 1.12, -0.56)], 2, (0.012, 0.012, 0.02))             # lunette dégivrante (66)
+harness(fb, [(0.54, 0.80, -0.60), (0.52, 1.10, -0.64), (0.40, 1.47, -0.58), (0.0, 1.49, -0.20), (-0.04, 1.49, -0.03)], 0.004)   # vers le plafonnier
 fb.add(cyl(0.012, 0.008, (-0.90, 0.47, -0.30), (0, 1, 0), caoutchouc, 16, name='passe-fil'))
 
 # =====================================================================================
@@ -137,7 +136,7 @@ branch(cc, [(0.56, 0.78, -0.56), (0.57, 0.72, -0.52), (CCP[0], CCP[1] - 0.04, CC
 fastener(cc, 'vis-centrale', (CCP[0] + 0.022, CCP[1], CCP[2]), (1, 0, 0), kind='screw', r=0.004, length=0.012, travel=0.02)
 
 pf_ = Part('plafonnier', (0, -0.15, 0))
-PP = (-0.05, roof_y(-0.05, 0.0) - 0.016, 0.0)   # contre le ciel de pavillon
+PP = (-0.05, 1.495, 0.0)
 pf_.add(extrude(rounded_rect(0.16, 0.06, 0.02), 0.012, (PP[0], PP[1] - 0.006, PP[2]), (0, 1, 0), plastique_cl, 'boitier', bev=0.003))
 pf_.add(extrude(rounded_rect(0.12, 0.045, 0.015), 0.006, (PP[0], PP[1] - 0.014, PP[2]), (0, 1, 0), diffuseur, 'diffuseur', bev=0.002))
 pf_.add(box((0.012, 0.006, 0.02), (PP[0] + 0.065, PP[1] - 0.016, PP[2]), noir, 0.002, 'interrupteur'))
@@ -170,9 +169,9 @@ for s in (1, -1):
     bulb(am, (HL[0] - 0.085, HL[1], s * 0.417), (1, 0, 0), 0.0125, 0.05, 0.0115, two=True)          # P 45 t 41, 45/40 W
     bulb(am, (HL[0] - 0.060, HL[1] - 0.05, s * 0.417), (1, 0, 0), 0.0045, 0.012, 0.0035)             # veilleuse R 19 5 W
     bulb(am, (GX - 0.002, 0.505, s * 0.485), (1, 0, 0), 0.0125, 0.03, 0.0075)                        # clignotant P 25-1 21 W
-    for yy in (0.72, 0.845):                                                                         # P 25-2 21/5 W et P 25-1
-        bulb(am, (x_rear(yy) + 0.008, yy, s * 0.565), (-1, 0, 0), 0.0125, 0.03, 0.0075)
-bulb(am, (x_rear(0.73) - 0.004, 0.728, 0.0), (-1, 0, 0), 0.0045, 0.012, 0.0035)                                    # éclaireur de plaque
+    for yy in (0.76, 0.87):                                                                          # P 25-2 21/5 W et P 25-1
+        bulb(am, (-1.755, yy, s * 0.632), (-1, 0, 0), 0.0125, 0.03, 0.0075)
+bulb(am, (-1.795, 0.62, 0.0), (-1, 0, 0), 0.0045, 0.012, 0.0035)                                    # éclaireur de plaque
 
 # =====================================================================================
 # APPAREIL DE CHAUFFAGE-VENTILATION (« climatiseur », p.75) : boîtier contre le tablier sous l'auvent
