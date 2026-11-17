@@ -86,14 +86,12 @@ branch(fa, [(1.05, 0.83, 0.53), (1.03, 0.76, 0.36), (1.005, 0.70, 0.26)], 3, (0.
 branch(fa, [(0.96, 0.84, 0.52), (0.98, 0.62, 0.40), (1.0, 0.43, 0.25), (1.0, 0.41, 0.22)], 2, (0.015, 0.015, 0.015))   # démarreur (solénoïde)
 branch(fa, [(0.76, 0.87, 0.28), (0.76, 0.84, 0.22), (0.75, 0.82, 0.20)], 2, (0.015, 0.015, 0.015))               # bobine
 branch(fa, [(0.74, 0.86, 0.04), (0.74, 0.74, 0.04), (0.735, 0.66, 0.04)], 1, (0.012, 0.012, 0.012))              # thermo-contact culasse (23)
-branch(fa, [(0.86, 0.86, 0.48), (0.95, 0.62, 0.22), (EX + 0.04, 0.47, 0.14)], 1, (0.012, 0.012, 0.012))           # mano-contact (21)
+branch(fa, [(0.76, 0.86, -0.46), (0.75, 0.60, -0.30), (0.78, 0.50, -0.16), (EX - 0.10, 0.496, -0.112)], 1, (0.012, 0.012, 0.012))   # mano-contact (21), côté gauche du bloc (moteur.py, RTA p.37)
 branch(fa, [(0.86, 0.86, -0.48), (0.86, 0.84, -0.45), (TABLIER_X + 0.15, 0.82, -0.43)], 2, (0.012, 0.012, 0.012))  # contacteur stop (52)
 branch(fa, [(1.20, 0.83, -0.53), (1.36, 0.66, -0.20), (1.40, 0.56, -0.10)], 2, (0.015, 0.012, 0.012))             # feux de recul (72)
 fa.add(cyl(0.022, 0.012, (TABLIER_X + 0.006, 0.86, -0.30), (1, 0, 0), caoutchouc, 20, name='passe-fil'))
 harness(fa, [(TABLIER_X + 0.01, 0.86, -0.30), (0.66, 0.84, -0.28), (0.60, 0.83, -0.25)], 0.0085)                  # vers le tableau de bord
-# mano-contact de pression d'huile (21) : 0,5 bar au ralenti, sur la rampe de graissage côté droit
-fa.add(extrude([(0.011 * math.cos(math.pi / 6 + k * math.pi / 3), 0.011 * math.sin(math.pi / 6 + k * math.pi / 3)) for k in range(6)], 0.012, (EX + 0.04, 0.47, 0.128), (0, 0, 1), laiton, 'mano-contact'))
-fa.add(cyl(0.009, 0.018, (EX + 0.04, 0.47, 0.141), (0, 0, 1), noir, 16, name='mano-contact-corps'))
+# le mano-contact de pression d'huile (21) lui-même est modélisé sur le bloc (moteur.py)
 # tresse de masse moteur → caisse
 fa.add(tube([(1.10, 0.36, -0.20), (1.12, 0.38, -0.30), (1.15, 0.40, -0.38)], 0.004, tresse, 'tresse-masse', seg=6))
 fastener(fa, 'tresse-masse', (1.15, 0.40, -0.385), (0, 0, -1), r=0.006, length=0.02, travel=0.03)

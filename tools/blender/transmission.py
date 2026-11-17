@@ -184,7 +184,7 @@ LEV = (XBU + 0.024, YP - 0.135, 0.085)   # extrémité du levier de fourchette
 STOP = (XF + 0.012, YP - 0.135, 0.085)   # butée de gaine sur le carter d'embrayage
 cab.add(tube([LEV, STOP], 0.0018, acier, seg=6))                            # câble nu et embout fileté
 cab.add(box((0.012, 0.03, 0.03), STOP, acier_noir, bev=0.003))               # patte d'arrêt de gaine
-cab.add(tube([STOP, (XF - 0.04, YP - 0.12, 0.13), (0.98, 0.42, 0.24), (0.95, 0.66, 0.28), (0.90, 0.80, 0.18), (0.86, 0.80, 0.0), (0.84, 0.70, -0.40)], 0.0042, noir, seg=8, res=14))
+cab.add(tube([STOP, (XF - 0.04, YP - 0.12, 0.13), (0.98, 0.42, 0.24), (0.95, 0.66, 0.28), (0.865, 0.80, 0.18), (0.845, 0.80, 0.0), (0.84, 0.70, -0.40)], 0.0042, noir, seg=8, res=14))
 fasteners(cab, 'reglage-embrayage', [((LEV[0] - 0.008, LEV[1], LEV[2]), (-1, 0, 0)), ((LEV[0] - 0.016, LEV[1], LEV[2]), (-1, 0, 0))], kind='nut', r=0.006, length=0.012, travel=0.025)
 
 # =====================================================================================

@@ -211,7 +211,7 @@ export const PARTS = {
   jauge: { name: 'Jauge à huile', system: 'moteur', desc: 'Contrôle sur sol plat, moteur arrêté depuis 10 minutes. Ne jamais descendre sous « Mini ». Si l’appoint dépasse 1 L aux 1 000 km, il faut chercher la cause.', specs: [['Maxi', '3 L'], ['Mini', '1,5 L']], pages: [5, 22] },
   bougies: {
     name: 'Bougies', system: 'alimentation',
-    desc: 'Quatre bougies d’allumage. Ordre d’allumage 1-3-4-2, cylindre n° 1 côté volant.',
+    desc: 'Quatre bougies d’allumage, côté droit (côté arbre à cames et tiges de culbuteurs, à l’opposé des collecteurs), l’allumeur entre les bougies 2 et 3 (MR 175 B-21 et B-50). Ordre d’allumage 1-3-4-2, cylindre n° 1 côté volant.',
     specs: [['Modèles (688 D7 12)', 'AC 43 F, Champion L 92 Y'], ['Écartement des électrodes', '0,55 à 0,65 mm']],
     pages: [23, 25],
   },

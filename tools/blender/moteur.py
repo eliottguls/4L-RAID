@@ -30,8 +30,10 @@
 #
 # Implantation (comme sur la 4L) : moteur longitudinal derrière l'essieu, volant et embrayage vers
 # l'avant (boîte devant), distribution par chaîne vers l'habitacle, arbre à cames côté droit
-# (allumeur, pompe à essence, filtre à huile), collecteur et bougies côté gauche, pompe à eau et
-# poulie d'arbre à cames côté embrayage.
+# (allumeur, pompe à essence, filtre à huile), collecteurs côté gauche, pompe à eau et poulie
+# d'arbre à cames côté embrayage. Bougies côté droit, du côté des tiges de culbuteurs et à
+# l'opposé des collecteurs (coupes MR 175 B-21 et B-50) ; allumeur entre les bougies 2 et 3
+# (B-50 : « déposer l'allumeur pour les cylindres 2 et 3 »).
 import math
 import os
 import sys
@@ -114,8 +116,8 @@ for x in [XF - 0.005, X(0) - PITCH / 2, X(1) - PITCH / 2, X(2) - PITCH / 2, XR +
 # Galerie d'arbre à cames côté droit et bossages des poussoirs
 bloc.add(cyl(0.026, XF - XR - 0.01, (EX, CAM_Y, CAM_Z), (1, 0, 0), fonte, 28))
 bloc.add(box((XF - XR - 0.02, 0.05, 0.03), (EX, CAM_Y + 0.035, CAM_Z + 0.01), fonte, bev=0.005))
-# Bossage d'allumeur / pompe à huile (arrière droit), de filtre et de pompe à essence
-bloc.add(cyl(0.022, 0.05, (EX - 0.13, CAM_Y + 0.07, CAM_Z + 0.032), (0, 1, 0), fonte, 24))
+# Bossage d'allumeur / pompe à huile (droite, entre les cylindres 2 et 3), de filtre et de pompe à essence
+bloc.add(cyl(0.022, 0.05, (EX, CAM_Y + 0.07, CAM_Z + 0.032), (0, 1, 0), fonte, 24))
 bloc.add(cyl(0.038, 0.03, (EX - 0.075, YC + 0.035, 0.112), (0, 0, 1), fonte, 32))   # portée de filtre
 bloc.add(cyl(0.030, 0.012, (EX - 0.075, YC + 0.035, 0.128), (0, 0, 1), fonte_usinee, 32))
 bloc.add(box((0.06, 0.05, 0.02), (EX + 0.03, CAM_Y - 0.02, 0.105), fonte, bev=0.004))     # pompe à essence
@@ -260,7 +262,7 @@ for n, (x, adm) in enumerate(VALVES):
         prof.append(((0.017 + 0.0065 * max(0.0, math.cos(a)) ** 2) * math.sin(a), (0.017 + 0.0065 * max(0.0, math.cos(a)) ** 2) * math.cos(a)))
     lobe = extrude(prof, 0.012, (x, CAM_Y, CAM_Z), (1, 0, 0), fonte_usinee, up=(0, math.cos(n * 1.3), math.sin(n * 1.3)))
     aac.add(lobe)
-aac.add(toothed(13, 0.016, 0.014, (EX - 0.13, CAM_Y, CAM_Z), (1, 0, 0), acier, helix=math.radians(45), depth=0.0018, name='pignon-allumeur'))
+aac.add(toothed(13, 0.016, 0.014, (EX, CAM_Y, CAM_Z), (1, 0, 0), acier, helix=math.radians(45), depth=0.0018, name='pignon-allumeur'))
 aac.add(box((0.006, 0.03, 0.05), (XR - 0.004, CAM_Y, CAM_Z), acier_noir, bev=0.003))   # bride de butée
 fasteners(aac, 'vis-bride-aac', [((XR - 0.008, CAM_Y + 0.017, CAM_Z), (-1, 0, 0)), ((XR - 0.008, CAM_Y - 0.017, CAM_Z), (-1, 0, 0))], r=0.005, length=0.015, travel=0.04)
 # poulie d'arbre à cames côté embrayage (courroie de pompe à eau et d'alternateur)
@@ -359,9 +361,9 @@ for i in range(4):
     cul.add(box((0.05, 0.034, 0.012), (X(i), YD + 0.035, ZH_COL - 0.005), alu, bev=0.004))   # brides d'échappement
 for x in (EX + 0.08, EX - 0.08):
     cul.add(box((0.05, 0.03, 0.012), (x, YD + 0.06, ZH_COL - 0.005), alu, bev=0.004))           # brides d'admission (siamoises)
-for i in range(4):  # puits de bougies côté gauche
-    cul.add(cyl(0.012, 0.03, (X(i), YD + 0.03, ZH_COL + 0.008), (0, 0.35, -1), alu, 20))
-for i in range(5):  # nervures verticales côté tiges de culbuteurs (vue MR 175 B-23)
+for i in range(4):  # puits de bougies côté droit, entre les tiges de culbuteurs (B-21, B-50)
+    cul.add(cyl(0.012, 0.03, (X(i), YD + 0.03, ZH_CAM - 0.008), (0, 0.45, 1), alu, 20))
+for i in (0, 1, 3, 4):  # nervures verticales côté tiges de culbuteurs (vue MR 175 B-23), dégagées au droit de l'allumeur
     cul.add(box((0.008, HEAD_H - 0.01, 0.008), (XR + 0.02 + i * 0.0825, YD + 0.038, ZH_CAM + 0.002), alu, bev=0.002))
 # sortie d'eau vers la pompe, côté volant
 cul.add(box((0.02, 0.05, 0.08), (XF + 0.008, YD + 0.04, 0.02), alu, bev=0.005))
@@ -424,7 +426,7 @@ fasteners(sump, 'vis-carter-huile', sv, r=0.005, length=0.015, travel=0.03)
 # POMPE À HUILE (planche 10) : dans le carter, entraînée par l'arbre à cames
 # =====================================================================================
 ph = Part('pompe-huile', (0, -0.3, 0.2))
-PX, PZ = EX - 0.13, CAM_Z + 0.032          # arbre de commande vertical (allumeur au-dessus, pompe en dessous)
+PX, PZ = EX, CAM_Z + 0.032          # arbre de commande vertical (allumeur au-dessus, pompe en dessous)
 PY = YC - 0.002                            # corps de pompe
 # pignon de commande d'allumeur et de pompe, engrené sur l'arbre à cames (fente : gros déport côté embrayage)
 ph.add(toothed(13, 0.016, 0.016, (PX, CAM_Y, PZ), (0, 1, 0), acier, hole=0.004, helix=math.radians(-45), depth=0.0018, name='pignon-commande'))
@@ -562,7 +564,7 @@ fastener(af, 'ecrou-filtre-air', (EX, AY + 0.062, -0.175), (0, 1, 0), kind='nut'
 # ALLUMAGE : allumeur, bougies, fils
 # =====================================================================================
 dl = Part('allumeur', (0, 0.5, 0.25))
-DX, DZ = EX - 0.13, CAM_Z + 0.032
+DX, DZ = EX, CAM_Z + 0.032
 DY0 = CAM_Y + 0.095
 dl.add(cyl(0.022, 0.07, (DX, DY0 + 0.035, DZ), (0, 1, 0), alu, 24))
 dl.add(cyl(0.036, 0.025, (DX, DY0 + 0.08, DZ), (0, 1, 0), alu, 32))
@@ -571,39 +573,43 @@ for k in range(4):
     a = 2 * math.pi * k / 4 + math.pi / 4
     dl.add(cyl(0.007, 0.02, (DX + 0.02 * math.cos(a), DY0 + 0.145, DZ + 0.02 * math.sin(a)), (0, 1, 0), bakelite, 14))
 dl.add(cyl(0.007, 0.02, (DX, DY0 + 0.15, DZ), (0, 1, 0), bakelite, 14))
-dl.add(cyl(0.02, 0.03, (DX + 0.045, DY0 + 0.075, DZ - 0.01), (1, 0, -0.3), alu, 24))   # capsule à dépression
+dl.add(cyl(0.02, 0.03, (DX, DY0 + 0.075, DZ + 0.048), (0, 0, 1), alu, 24))   # capsule à dépression (vers l'extérieur)
 dl.add(box((0.05, 0.006, 0.03), (DX, DY0 + 0.004, DZ + 0.02), acier_noir, bev=0.002))   # bride
 fastener(dl, 'fix-allumeur', (DX, DY0 + 0.007, DZ + 0.03), (0, 1, 0), r=0.006, length=0.02, travel=0.04)
 
 bg = Part('bougies', (0, 0.25, -0.4))
 plug_specs = []
 for i in range(4):
-    p = (X(i), YD + 0.04, ZH_COL - 0.004)
-    plug_specs.append((p, (0, 0.35, -1)))
+    p = (X(i), YD + 0.04, ZH_CAM + 0.004)
+    plug_specs.append((p, (0, 0.45, 1)))
 fasteners(bg, 'bougies', plug_specs, kind='spark', r=0.0105, length=0.07, travel=0.10)
-# fils d'allumage : tête d'allumeur → bougies (passent au-dessus du cache-culbuteurs)
+# fils d'allumage : tête d'allumeur → bougies, courts, tout du côté droit
 ign = Part('allumeur', (0, 0.5, 0.25))
 order_cap = [0, 2, 3, 1]
 for k, i in enumerate(order_cap):
     a = 2 * math.pi * k / 4 + math.pi / 4
     start = (DX + 0.02 * math.cos(a), DY0 + 0.155, DZ + 0.02 * math.sin(a))
-    end = (X(i), YD + 0.07, -0.20)
-    ign.add(tube([start, (start[0], DY0 + 0.20, start[2]), ((start[0] + end[0]) / 2, YH + 0.10, 0.0), (end[0], YH + 0.06, -0.12), end], 0.0045, fil_rouge, seg=8, res=6))
-ign.add(tube([(DX, DY0 + 0.16, DZ), (DX + 0.05, DY0 + 0.22, DZ + 0.12), (0.86, 0.80, 0.42)], 0.0045, fil_rouge, seg=8, res=6))
+    if i == 0:   # n° 1 sous l'alternateur : le fil part vers le bas puis revient vers l'allumeur
+        end = (X(i), YD + 0.067, 0.146)
+        path = [start, (start[0], DY0 + 0.18, start[2]), ((start[0] + 0.99) / 2, YD + 0.14, 0.15), (0.98, YD + 0.09, 0.17), (0.985, YD + 0.035, 0.16), (X(i) - 0.005, YD + 0.040, 0.152), end]
+    else:
+        end = (X(i), YD + 0.081, 0.175)   # capuchon dans l'axe de la bougie
+        path = [start, (start[0], DY0 + 0.18, start[2]), ((start[0] + end[0]) / 2, YD + 0.14, 0.125), (end[0], YD + 0.105, 0.19), end]
+    ign.add(tube(path, 0.0045, fil_rouge, seg=8, res=6))
 
 # =====================================================================================
 # POMPE À ESSENCE (mécanique, côté droit) et FILTRE À HUILE
 # =====================================================================================
 pe = Part('pompe-essence', (0, 0, 0.4))
-pe.add(box((0.05, 0.04, 0.018), (EX + 0.03, CAM_Y - 0.02, 0.105), alu, bev=0.004))
-pe.add(cyl(0.035, 0.03, (EX + 0.03, CAM_Y - 0.02, 0.130), (0, 0, 1), alu, 32))
-pe.add(cyl(0.038, 0.006, (EX + 0.03, CAM_Y - 0.02, 0.130), (0, 0, 1), acier, 32))
-pe.add(cyl(0.025, 0.012, (EX + 0.03, CAM_Y - 0.02, 0.151), (0, 0, 1), acier, 28))
+pe.add(box((0.05, 0.04, 0.018), (EX + 0.06, CAM_Y - 0.02, 0.105), alu, bev=0.004))
+pe.add(cyl(0.035, 0.03, (EX + 0.06, CAM_Y - 0.02, 0.130), (0, 0, 1), alu, 32))
+pe.add(cyl(0.038, 0.006, (EX + 0.06, CAM_Y - 0.02, 0.130), (0, 0, 1), acier, 32))
+pe.add(cyl(0.025, 0.012, (EX + 0.06, CAM_Y - 0.02, 0.151), (0, 0, 1), acier, 28))
 for s in (1, -1):
-    pe.add(cyl(0.004, 0.02, (EX + 0.03 + s * 0.02, CAM_Y + 0.01, 0.135), (0, 1, 0), alu, 10))
-pe.add(tube([(EX + 0.05, CAM_Y + 0.02, 0.135), (EX + 0.04, YD + 0.06, 0.13), (EX + 0.03, YH + 0.07, 0.0), (EX + 0.04, CY + 0.03, -0.14)], 0.0035, caoutchouc, seg=6))
-pe.add(tube([(EX + 0.01, CAM_Y + 0.02, 0.135), (EX + 0.005, CAM_Y + 0.045, 0.20), (EX - 0.005, CAM_Y + 0.063, 0.24), (EX - 0.015, CAM_Y + 0.067, 0.25)], 0.0035, caoutchouc, seg=6))   # arrivée du filtre à essence (soubassement.py)
-fasteners(pe, 'fix-pompe-essence', [((EX + 0.03 + s * 0.02, CAM_Y - 0.02, 0.114), (0, 0, 1)) for s in (1, -1)], kind='nut', r=0.006, length=0.02, travel=0.04)
+    pe.add(cyl(0.004, 0.02, (EX + 0.06 + s * 0.02, CAM_Y + 0.01, 0.135), (0, 1, 0), alu, 10))
+pe.add(tube([(EX + 0.06, CAM_Y + 0.02, 0.135), (EX + 0.08, YD - 0.02, 0.115), (EX + 0.08, YD + 0.10, 0.105), (EX + 0.08, YH + 0.09, 0.04), (EX + 0.08, YH + 0.10, -0.03), (EX + 0.06, YH + 0.08, -0.10), (EX + 0.04, CY + 0.03, -0.14)], 0.0035, caoutchouc, seg=6))
+pe.add(tube([(EX + 0.02, CAM_Y + 0.02, 0.135), (EX + 0.015, CAM_Y + 0.045, 0.20), (EX - 0.005, CAM_Y + 0.063, 0.24), (EX - 0.015, CAM_Y + 0.067, 0.25)], 0.0035, caoutchouc, seg=6))   # arrivée du filtre à essence (soubassement.py)
+fasteners(pe, 'fix-pompe-essence', [((EX + 0.06 + s * 0.02, CAM_Y - 0.02, 0.114), (0, 0, 1)) for s in (1, -1)], kind='nut', r=0.006, length=0.02, travel=0.04)
 
 fh = Part('filtre-huile', (0, -0.05, 0.45))
 filt = lathe([(0.0, 0.0), (0.04, 0.0), (0.046, 0.006), (0.046, 0.09), (0.042, 0.098), (0.0, 0.1)], (0, 0, 0), (0, 1, 0), bleu, 40)
@@ -616,7 +622,8 @@ filt['dir'] = [0, 0, 1]
 fh.fasteners.append(filt)
 
 jg = Part('jauge', (0, 0.45, 0.1))
-jg.add(tube([(EX + 0.06, YC + 0.0, 0.112), (EX + 0.075, YD - 0.02, 0.13), (EX + 0.085, YH + 0.06, 0.15), (EX + 0.09, YH + 0.11, 0.155)], 0.0045, acier_noir, seg=6))
-jg.add(torus(0.014, 0.004, (EX + 0.09, YH + 0.128, 0.155), (0, 0, 1), M('jaune', 0xd2ae35, 0.1, 0.5), 20, 8))
+# tube de jauge derrière la bougie n° 4, au-dessus du filtre à huile
+jg.add(tube([(EX - 0.15, YC + 0.09, 0.104), (EX - 0.15, YD - 0.02, 0.125), (EX - 0.15, YH + 0.06, 0.15), (EX - 0.15, YH + 0.11, 0.155)], 0.0045, acier_noir, seg=6))
+jg.add(torus(0.014, 0.004, (EX - 0.15, YH + 0.128, 0.155), (0, 0, 1), M('jaune', 0xd2ae35, 0.1, 0.5), 20, 8))
 
 export(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'models', 'moteur.glb'))

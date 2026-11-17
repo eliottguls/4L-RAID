@@ -170,7 +170,7 @@ lo = [(RX - 0.065, RY - 0.10, ZR + 0.018), (1.50, 0.53, 0.20), (1.25, 0.58, 0.14
 dur.add(tube(up, 0.019, caoutchouc, 'durite-superieure', seg=14, res=10))     # thermostat → radiateur
 dur.add(tube(lo, 0.019, caoutchouc, 'durite-inferieure', seg=14, res=10))     # radiateur → pompe
 dur.add(tube([(0.76, 0.64, -0.06), (0.73, 0.72, -0.20), (TABLIER_X + 0.005, 0.79, -0.30)], 0.010, caoutchouc, 'durite-chauffage-aller', seg=10))
-dur.add(tube([(1.12, 0.58, 0.07), (0.95, 0.64, 0.25), (0.76, 0.74, 0.30), (TABLIER_X + 0.005, 0.79, 0.28)], 0.010, caoutchouc, 'durite-chauffage-retour', seg=10, res=10))
+dur.add(tube([(1.12, 0.58, 0.07), (1.08, 0.57, 0.16), (1.0, 0.585, 0.225), (0.95, 0.64, 0.25), (0.76, 0.74, 0.30), (TABLIER_X + 0.005, 0.79, 0.28)], 0.010, caoutchouc, 'durite-chauffage-retour', seg=10, res=10))
 dur.add(tube([(VX + 0.06, VY - 0.07, VZ), (1.20, 0.72, 0.35), (1.55, 0.82, 0.10), (RX - 0.03, RY + CH / 2 + 0.008, ZL - 0.018)], 0.005, caoutchouc, 'tuyau-vase', seg=8, res=10))
 cl = []
 for p, ax in ((up[0], (1, 0.4, 0)), (up[-1], (1, 0, 0)), (lo[0], (1, 0, 0)), (lo[-1], (1, 0, 0)),
@@ -262,7 +262,7 @@ bob = Part('bobine', (0, 0.3, 0.3))
 bob.add(lathe([(0.0, -0.07), (0.03, -0.07), (0.03, 0.06), (0.02, 0.075), (0.0, 0.078)], (TABLIER_X + 0.05, 0.80, 0.20), (0, 1, 0), bleu, 28, 'bobine'))
 bob.add(box((0.02, 0.10, 0.07), (TABLIER_X + 0.012, 0.80, 0.20), acier_noir, 0.004, 'collier'))
 bob.add(cyl(0.006, 0.025, (TABLIER_X + 0.05, 0.89, 0.20), (0, 1, 0), noir, 12, name='sortie-ht'))
-bob.add(tube([(TABLIER_X + 0.05, 0.90, 0.20), (0.80, 0.86, 0.15), (0.84, 0.80, 0.11)], 0.004, noir, seg=6))   # fil HT vers l'allumeur
+bob.add(tube([(TABLIER_X + 0.05, 0.90, 0.20), (0.84, 0.88, 0.16), (0.91, 0.82, 0.12), (0.92, 0.79, 0.109)], 0.004, noir, seg=6))   # fil HT vers l'allumeur (entre bougies 2 et 3, moteur.py)
 
 lg = Part('lave-glace', (0, 0.4, 0.3))
 lg.add(box((0.12, 0.13, 0.085), (1.26, 0.77, 0.475), plastique, 0.02, 'reservoir'))
