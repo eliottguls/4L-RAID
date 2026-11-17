@@ -21,14 +21,17 @@
 #
 # Implantation (comme sur la 4L) : moteur longitudinal derrière l'essieu, volant et embrayage vers
 # l'avant (boîte devant), distribution par chaîne vers l'habitacle, arbre à cames côté droit
-# (allumeur, pompe à essence, filtre à huile), collecteur et bougies côté gauche, pompe à eau et
-# poulie d'arbre à cames côté embrayage.
+# (allumeur, pompe à essence, filtre à huile, plaque moteur), collecteur, carburateur, bougies,
+# mano-contact d'huile et bouchon de vidange d'eau côté gauche, démarreur à gauche sous le
+# collecteur (equipements.py), pompe à eau et poulie d'arbre à cames côté embrayage.
+# Contrôle des côtés : photos du compartiment moteur p. V et VI (prises depuis l'aile droite),
+# p.23 (« manocontact, côté gauche du carter-cylindres »), p.59 (dépose du démarreur).
 import math
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib import (M, Part, apply_all, bevel, boolean, box, cyl, delete, export, extrude, fastener,  # noqa: E402
+from lib import (M, M_img, Part, quad, apply_all, bevel, boolean, box, cyl, delete, export, extrude, fastener,  # noqa: E402
                  fasteners, gear, hexagon, join, lathe, place, reset, rounded_rect, sphere, toothed, torus, tube)
 
 reset()
@@ -43,6 +46,11 @@ HEAD_H = 0.072
 YH = YD + 0.0015 + HEAD_H  # dessus de culasse (joint 1,5 mm)
 XF, XR = EX + 0.185, EX - 0.185   # faces avant (volant) et arrière (distribution) du bloc
 CAM_Z, CAM_Y = 0.074, YC + 0.088  # arbre à cames latéral, côté droit
+# Démarreur (equipements.py) : côté GAUCHE, sous le collecteur, nez dans le carter d'embrayage.
+# RTA p.59 (imprimée) : pour le déposer il faut ôter le filtre à air, la bride du tuyau
+# d'échappement et l'écran de protection du démarreur → il est du côté du collecteur.
+# Son axe est à 141,5 mm de celui du vilebrequin (couronne Ø 259 + pignon 9 dents).
+SA_Y, SA_Z = 0.412, -0.141
 # Manivelles : 1 et 4 au PMH, 2 et 3 au PMB
 CRANK_ANGLE = [0, math.pi, math.pi, 0]
 
@@ -82,6 +90,11 @@ water = box((XF - XR - 0.03, 0.15, 0.17), (EX, YD - 0.075 + 0.001, -0.004), None
 boolean(body, water)
 apply_all(body)
 delete(water)
+# dégagement venu de fonderie le long du démarreur (flanc gauche, côté volant)
+pocket = cyl(0.044, 0.19, (XF - 0.085, SA_Y, SA_Z), (1, 0, 0), None, 28)
+boolean(body, pocket)
+apply_all(body)
+delete(pocket)
 bloc.add(body)
 # Plan de joint usiné, percé des 4 chemises
 deck = extrude(rounded_rect(XF - XR, 0.205, 0.006), 0.006, (EX, YD - 0.003, -0.004), (0, 1, 0), fonte_usinee)
@@ -93,7 +106,10 @@ for i in range(4):
 bloc.add(deck)
 # Nervures verticales côté gauche (entre cylindres) et côté droit
 for x in [XF - 0.005, X(0) - PITCH / 2, X(1) - PITCH / 2, X(2) - PITCH / 2, XR + 0.005]:
-    bloc.add(box((0.012, 0.20, 0.014), (x, YD - 0.12, -0.108), fonte, bev=0.003))
+    if x > XF - 0.18:   # au-dessus du démarreur : nervure arrêtée sur le dégagement
+        bloc.add(box((0.012, 0.115, 0.014), (x, YD - 0.0575, -0.108), fonte, bev=0.003))
+    else:
+        bloc.add(box((0.012, 0.20, 0.014), (x, YD - 0.12, -0.108), fonte, bev=0.003))
 # Galerie d'arbre à cames côté droit et bossages des poussoirs
 bloc.add(cyl(0.026, XF - XR - 0.01, (EX, CAM_Y, CAM_Z + 0.022), (1, 0, 0), fonte, 28))
 bloc.add(box((XF - XR - 0.02, 0.06, 0.03), (EX, CAM_Y + 0.035, CAM_Z + 0.03), fonte, bev=0.005))
@@ -113,6 +129,25 @@ for s in (1, -1):
     bloc.add(box((0.07, 0.06, 0.03), (EX - 0.04, YC + 0.06, s * 0.118), fonte, bev=0.006))
     bloc.add(box((0.09, 0.008, 0.07), (EX - 0.04, YC + 0.035, s * 0.15), acier_noir, bev=0.002))
     bloc.add(cyl(0.028, 0.045, (EX - 0.04, YC + 0.0, s * 0.175), (0, -0.6, s), caoutchouc, 20))
+# Plaque moteur rivée sur le flanc droit, en arrière de l'alternateur (RTA p.5) : type 688 D7 12 et numéro
+def _plaque_moteur():
+    import tempfile
+    from PIL import Image, ImageDraw, ImageFont
+    im = Image.new('RGB', (320, 150), (205, 205, 196))
+    d = ImageDraw.Draw(im)
+    d.rectangle((2, 2, 317, 147), outline=(90, 90, 90), width=4)
+    fp = next((f for f in ('/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed-Bold.ttf', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf') if os.path.exists(f)), None)
+    f = ImageFont.truetype(fp, 46) if fp else None
+    d.text((160, 48), '688 D7 / 12', fill=(25, 25, 25), font=f, anchor='mm')
+    d.text((160, 108), 'N° ·········', fill=(25, 25, 25), font=f, anchor='mm')
+    path = os.path.join(tempfile.mkdtemp(prefix='pm-'), 'plaque-moteur.png')
+    im.save(path)
+    return path
+
+
+bloc.add(quad((EX + 0.065, YD - 0.022, 0.0990), 0.064, 0.030, (0, 0, 1), M_img('plaque-moteur', _plaque_moteur(), 0.6, 0.4), 'plaque-moteur'))
+for dx in (-0.028, 0.028):
+    bloc.add(cyl(0.0025, 0.003, (EX + 0.065 + dx, YD - 0.022, 0.0995), (0, 0, 1), acier, 10))
 # Manocontact de pression d'huile côté gauche (p.37)
 bloc.add(extrude(hexagon(0.011), 0.01, (EX - 0.10, CAM_Y - 0.02, -0.112), (0, 0, -1), acier))
 bloc.add(cyl(0.010, 0.022, (EX - 0.10, CAM_Y - 0.02, -0.128), (0, 0, -1), noir, 16))
@@ -122,7 +157,7 @@ bloc.add(lathe([(0.015, -0.004), (0.021, -0.004), (0.021, 0.004), (0.015, 0.004)
 fastener(bloc, 'bouchon-vidange-bloc', (EX + 0.03, YC + 0.045, -0.106), (0, 0, -1), kind='plug', r=0.008, length=0.02, travel=0.05)
 # Vis d'assemblage boîte / moteur autour de la face avant
 fix_b = []
-for a in (30, 90, 150, 210, 270, 330):
+for a in (30, 90, 150, 238, 270, 330):   # à 210° : bride du démarreur
     r = 0.165
     fix_b.append(((XF + 0.006, YC + 0.04 + r * 0.72 * math.sin(math.radians(a)), r * math.cos(math.radians(a))), (-1, 0, 0)))
 fasteners(bloc, 'fix-boite', fix_b, r=0.009, length=0.05, travel=0.08)
@@ -495,13 +530,15 @@ fasteners(wp, 'vis-poulie-pompe', [((XF + 0.08, WY + 0.022 * math.cos(a), WZ + 0
 # =====================================================================================
 # COLLECTEUR ADMISSION-ÉCHAPPEMENT (planche 9), côté gauche
 # =====================================================================================
+# sortie de descente déportée vers l'extérieur : le démarreur loge juste dessous
+COL_Z = -0.19
 col = Part('echappement', (0, 0.0, -0.35))
 fonte_ech = M('fonte-echappement', 0x4b4845, 0.5, 0.65)
 for i in range(4):   # pipes d'échappement vers la descente
     x = X(i)
-    col.add(tube([(x, YD + 0.035, -0.115), (x, YD + 0.03, -0.14), (EX + (x - EX) * 0.35, YD - 0.02, -0.16), (EX + 0.02, YD - 0.08, -0.16)], 0.016, fonte_ech, seg=12, res=6))
-col.add(cyl(0.024, 0.06, (EX + 0.02, YD - 0.10, -0.16), (0, 1, 0), fonte_ech, 24))
-col.add(cyl(0.035, 0.008, (EX + 0.02, YD - 0.13, -0.16), (0, 1, 0), fonte_ech, 24))   # bride de descente
+    col.add(tube([(x, YD + 0.035, -0.115), (x, YD + 0.03, -0.14), (EX + (x - EX) * 0.35, YD - 0.02, -0.17), (EX + 0.02, YD - 0.08, COL_Z)], 0.016, fonte_ech, seg=12, res=6))
+col.add(cyl(0.024, 0.06, (EX + 0.02, YD - 0.10, COL_Z), (0, 1, 0), fonte_ech, 24))
+col.add(cyl(0.035, 0.008, (EX + 0.02, YD - 0.13, COL_Z), (0, 1, 0), fonte_ech, 24))   # bride de descente
 col.add(tube([(EX - 0.08, YD + 0.06, -0.12), (EX - 0.05, YD + 0.085, -0.16), (EX, YD + 0.09, -0.175), (EX + 0.05, YD + 0.085, -0.16), (EX + 0.08, YD + 0.06, -0.12)], 0.017, alu, seg=12, res=8))
 col.add(cyl(0.03, 0.03, (EX, YD + 0.095, -0.175), (0, 1, 0), alu, 28))   # pipe d'admission sous le carburateur
 col.add(box((0.16, 0.004, 0.07), (EX + 0.02, YD - 0.035, -0.205), M('tole-alu', 0xc7cccf, 0.8, 0.35), bev=0.001))   # tôle pare-chaleur
@@ -510,29 +547,172 @@ ec = [((x, YD + y, -0.123), (0, 0, -1)) for x, y in ((EX + 0.16, 0.05), (EX + 0.
 fasteners(col, 'ecrous-collecteur', ec, kind='nut', r=0.007, length=0.03, travel=0.05)
 
 # =====================================================================================
-# CARBURATEUR (Solex / Zenith) et FILTRE À AIR rond
+# CARBURATEUR ZENITH 28 IF (V 050 78 sur moteur 688 D7 12) — vue éclatée 3 bis et coupe (RTA p.28)
+# Simple corps inversé, papillon Ø 28, diffuseur 20, volet de départ à froid, enrichisseur de pointe.
+# Trois ensembles qui s'écartent à l'éclaté : corps-cuve (8) avec papillon et vis A / B,
+# flotteur (5) et sa barrette (4), couvercle assemblé (2) avec cornet, volet, pointeau (3) et
+# raccord d'arrivée à filtre (1). Gicleur principal (9) sous bouchon en bas de cuve, gicleur de
+# ralenti (6) sous le couvercle, vis de richesse (10) à capuchon, vis butée de papillon (11),
+# joints de cuve (7) et de bride (12). Cotes d'encombrement estimées d'après les dessins.
 # =====================================================================================
-carb = Part('carburateur', (0, 0.35, -0.35))
-CY = YD + 0.11
-carb.add(box((0.065, 0.012, 0.055), (EX, CY, -0.175), alu, bev=0.003))                      # embase isolante
-carb.add(box((0.06, 0.05, 0.055), (EX, CY + 0.031, -0.175), M('zamak', 0xbcb6a3, 0.6, 0.4), bev=0.008))  # corps
-carb.add(box((0.04, 0.045, 0.04), (EX + 0.045, CY + 0.026, -0.175), M('zamak', 0xbcb6a3, 0.6, 0.4), bev=0.008))   # cuve
-carb.add(cyl(0.028, 0.012, (EX, CY + 0.062, -0.175), (0, 1, 0), M('zamak', 0xbcb6a3, 0.6, 0.4), 28))   # buse
-carb.add(cyl(0.018, 0.006, (EX - 0.034, CY + 0.02, -0.175), (1, 0, 0), acier, 18))   # secteur d'accélérateur
-carb.add(tube([(EX - 0.04, CY + 0.02, -0.19), (EX - 0.09, CY + 0.06, -0.3), (0.83, 0.75, -0.40)], 0.0025, noir, seg=6))   # câble
-fasteners(carb, 'ecrous-carbu', [((EX + 0.028, CY + 0.008, -0.15), (0, 1, 0)), ((EX - 0.028, CY + 0.008, -0.20), (0, 1, 0))], kind='nut', r=0.006, length=0.02, travel=0.04)
-fasteners(carb, 'vis-ralenti', [((EX + 0.012, CY + 0.012, -0.205), (0, 0, -1)), ((EX - 0.012, CY + 0.012, -0.205), (0, 0, -1))], kind='screw', r=0.004, length=0.02, travel=0.012)
+zamak = M('zamak', 0xbcb6a3, 0.6, 0.4)
+zamak_c = M('zamak-couvercle', 0xc6c1ae, 0.6, 0.38)
+laiton_c = M('laiton', 0xb59a52, 0.9, 0.35)
+CY = YD + 0.11                 # dessus de la pipe d'admission (plan de bride)
+CZ = -0.175                    # axe du corps, côté gauche (côté collecteur)
+BOWL_X = EX + 0.044            # cuve à niveau constant vers l'avant, accolée au fût
+YJ = CY + 0.0565               # plan de joint corps / couvercle
+YT = CY + 0.0645               # dessus du couvercle
+HT = CY + 0.098                # haut du cornet d'air
+STUDS = [(EX + 0.028, CZ + 0.025), (EX - 0.028, CZ - 0.025)]
 
+
+def hull2d(pts):
+    pts = sorted(set(pts))
+
+    def cr(o, a, b):
+        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+    lo, up = [], []
+    for p in pts:
+        while len(lo) >= 2 and cr(lo[-2], lo[-1], p) <= 0:
+            lo.pop()
+        lo.append(p)
+    for p in reversed(pts):
+        while len(up) >= 2 and cr(up[-2], up[-1], p) <= 0:
+            up.pop()
+        up.append(p)
+    return lo[:-1] + up[:-1]
+
+
+def ring_pts(cx, cz, r, n=20):
+    # (u, v) du plan local d'une extrusion d'axe +y : u = x, v = -z
+    return [(cx - EX + r * math.cos(2 * math.pi * k / n), -(cz - CZ) + r * math.sin(2 * math.pi * k / n)) for k in range(n)]
+
+
+def rect_pts(cx, cz, wx, wz, r=0.006, n=5):
+    pts = []
+    for sx, sz in ((1, 1), (-1, 1), (-1, -1), (1, -1)):
+        pts += ring_pts(cx + sx * (wx / 2 - r), cz + sz * (wz / 2 - r), r, 4 * n)
+    return pts
+
+
+# contour commun corps / joint / couvercle : fût + cuve
+TOP_OUTLINE = hull2d(ring_pts(EX, CZ, 0.0265) + rect_pts(BOWL_X, CZ, 0.050, 0.056))
+FLANGE_OUTLINE = hull2d(ring_pts(EX, CZ, 0.027) + ring_pts(*STUDS[0], 0.011) + ring_pts(*STUDS[1], 0.011))
+
+# ---------------------------------------------------------------- corps-cuve (8)
+carb = Part('carburateur', (0, 0.35, -0.35))
+carb.add(extrude(FLANGE_OUTLINE, 0.0015, (EX, CY + 0.00075, CZ), (0, 1, 0), joint, 'joint-bride'))       # (12)
+flange = extrude(FLANGE_OUTLINE, 0.008, (EX, CY + 0.0055, CZ), (0, 1, 0), zamak, 'bride', bev=0.001)
+for sx, sz in STUDS + [(EX, CZ)]:
+    c = cyl(0.014 if (sx, sz) == (EX, CZ) else 0.0045, 0.03, (sx, CY + 0.0055, sz), (0, 1, 0), None, 24)
+    boolean(flange, c)
+    apply_all(flange)
+    delete(c)
+carb.add(flange)
+# fût : alésage Ø 28 traversant, papillon visible par le haut une fois le couvercle déposé
+carb.add(lathe([(0.014, 0.0), (0.0235, 0.0), (0.0235, YJ - CY - 0.0095), (0.014, YJ - CY - 0.0095)], (EX, CY + 0.0095, CZ), (0, 1, 0), zamak, 40, 'fut'))
+# cuve ouverte en haut (flotteur dedans)
+bowl = box((0.050, YJ - CY - 0.011, 0.056), (BOWL_X, (YJ + CY + 0.011) / 2, CZ), zamak, bev=0.005, name='cuve')
+cav = box((0.038, 0.05, 0.046), (BOWL_X + 0.002, YJ + 0.004, CZ), None)
+boolean(bowl, cav)
+apply_all(bowl)
+delete(cav)
+carb.add(bowl)
+# diffuseur Ø 20 (buse) dans le fût, tube émulseur et puits de gicleur côté cuve
+carb.add(lathe([(0.010, 0.0), (0.014, -0.004), (0.014, 0.020), (0.0115, 0.016), (0.010, 0.010)], (EX, CY + 0.030, CZ), (0, 1, 0), zamak, 32, 'diffuseur'))
+carb.add(cyl(0.004, 0.034, (BOWL_X - 0.019, CY + 0.034, CZ), (0, 1, 0), laiton_c, 12, name='tube-emulseur'))   # (coupe, 9)
+carb.add(tube([(BOWL_X - 0.019, CY + 0.046, CZ), (EX + 0.009, CY + 0.046, CZ)], 0.0018, laiton_c, 'bec-principal', seg=6))
+# axe et papillon des gaz (1), fermé (incliné de 10°)
+carb.add(cyl(0.0028, 0.078, (EX, CY + 0.018, CZ - 0.004), (0, 0, 1), acier, 12, name='axe-papillon'))
+for sz in (1, -1):
+    carb.add(cyl(0.0065, 0.010, (EX, CY + 0.018, CZ + sz * 0.026), (0, 0, 1), zamak, 16, name='bossage-axe'))
+carb.add(cyl(0.0137, 0.0012, (EX, CY + 0.018, CZ), (math.sin(math.radians(10)), math.cos(math.radians(10)), 0), laiton_c, 32, name='papillon'))
+for dx in (-0.005, 0.005):
+    carb.add(cyl(0.0014, 0.003, (EX + dx, CY + 0.0188, CZ), (0, 1, 0), acier, 8, name='vis-papillon'))
+# levier d'accélérateur (secteur) côté extérieur, ressort de rappel, butée de la vis A
+lev = hull2d([(0.009 * math.cos(a), 0.009 * math.sin(a)) for a in [k * math.pi / 8 for k in range(16)]] +
+             [(-0.032 + 0.006 * math.cos(a), 0.014 + 0.006 * math.sin(a)) for a in [k * math.pi / 8 for k in range(16)]] +
+             [(-0.010, -0.012), (-0.020, -0.010)])
+carb.add(extrude(lev, 0.003, (EX, CY + 0.018, CZ - 0.040), (0, 0, 1), acier, 'levier-accelerateur'))
+carb.add(cyl(0.0035, 0.008, (EX - 0.032, CY + 0.032, CZ - 0.043), (0, 0, 1), acier, 10, name='rotule-cable'))
+spring = [(EX - 0.010 + 0.026 * i / 40, CY + 0.007 + 0.003 * math.cos(2 * math.pi * 6 * i / 40), CZ - 0.046 + 0.003 * math.sin(2 * math.pi * 6 * i / 40)) for i in range(41)]
+carb.add(tube(spring, 0.0007, M('ressort', 0x6d7d8a, 0.8, 0.35), 'ressort-rappel', seg=4, res=2))
+carb.add(box((0.004, 0.010, 0.022), (EX + 0.018, CY + 0.007, CZ - 0.036), acier, name='patte-ressort'))   # accroche sur la bride
+carb.add(box((0.008, 0.006, 0.010), (EX - 0.016, CY + 0.012, CZ - 0.040), zamak, bev=0.001, name='butee-vis-a'))
+# câble d'accélérateur : gaine arrêtée sur une patte, vers la pédale par le tablier
+carb.add(box((0.004, 0.022, 0.016), (EX - 0.052, CY + 0.026, CZ - 0.046), acier_noir, bev=0.001, name='patte-gaine'))
+carb.add(tube([(EX - 0.032, CY + 0.032, CZ - 0.046), (EX - 0.052, CY + 0.032, CZ - 0.046)], 0.0009, acier, 'cable-nu', seg=6))
+carb.add(tube([(EX - 0.054, CY + 0.032, CZ - 0.046), (EX - 0.09, CY + 0.05, CZ - 0.07), (0.80, 0.80, -0.32), (0.72, 0.82, -0.40)], 0.0025, noir, 'gaine-accelerateur', seg=6, res=10))
+# vis de richesse (10) : bossage et capuchon d'inviolabilité ; prise de dépression d'avance
+carb.add(cyl(0.0065, 0.012, (EX - 0.027, CY + 0.014, CZ + 0.012), (1, 0, 0), zamak, 16, name='bossage-richesse'))
+carb.add(cyl(0.0028, 0.014, (EX - 0.004, CY + 0.026, CZ + 0.030), (0, 0, 1), laiton_c, 10, name='prise-depression'))
+carb.add(tube([(EX - 0.004, CY + 0.026, CZ + 0.036), (EX - 0.01, CY + 0.06, CZ + 0.07), (0.87, YH + 0.075, -0.02), (0.85, YH + 0.06, 0.07), (0.835, CAM_Y + 0.17, 0.096)], 0.0028, caoutchouc, 'tuyau-depression', seg=6, res=10))
+# bouchon de gicleur principal (9) en bas de cuve ; gicleur de ralenti (6) sous le couvercle
+fastener(carb, 'gicleur-principal-carbu', (BOWL_X + 0.025, CY + 0.019, CZ + 0.006), (1, 0, 0), kind='plug', r=0.0055, length=0.012, travel=0.04)
+fastener(carb, 'gicleur-ralenti-carbu', (EX + 0.021, YJ - 0.0005, CZ + 0.022), (0, 1, 0), kind='screw', r=0.0028, length=0.016, travel=0.035)
+# vis A (butée de papillon, volume) puis B (richesse), comme sur la photo de réglage p.28
+fasteners(carb, 'vis-ralenti', [((EX - 0.016, CY + 0.031, CZ - 0.040), (0, 1, 0)), ((EX - 0.034, CY + 0.014, CZ + 0.012), (-1, 0, 0.2))], kind='screw', r=0.0038, length=0.018, travel=0.014)
+fasteners(carb, 'ecrous-carbu', [((sx, CY + 0.0105, sz), (0, 1, 0)) for sx, sz in STUDS], kind='nut', r=0.006, length=0.02, travel=0.04)
+
+# ---------------------------------------------------------------- flotteur (5) et barrette (4)
+fl = Part('carbu-flotteur', (0, 0.52, -0.35))
+fl.add(box((0.026, 0.020, 0.036), (BOWL_X + 0.008, CY + 0.030, CZ), M('flotteur', 0x2d2a26, 0.0, 0.5), bev=0.006, name='flotteur'))
+fl.add(box((0.020, 0.0015, 0.010), (BOWL_X - 0.006, CY + 0.041, CZ), laiton_c, name='bras-flotteur'))
+fl.add(tube([(BOWL_X - 0.010, CY + 0.041, CZ), (BOWL_X - 0.010, CY + 0.046, CZ)], 0.0012, laiton_c, 'languette', seg=6))
+fl.add(box((0.006, 0.012, 0.024), (BOWL_X - 0.015, CY + 0.051, CZ), acier, bev=0.001, name='barrette'))   # (4)
+fl.add(cyl(0.0012, 0.030, (BOWL_X - 0.015, CY + 0.051, CZ), (0, 0, 1), acier, 8, name='axe-flotteur'))
+
+# ---------------------------------------------------------------- couvercle assemblé (2)
+cv = Part('carbu-couvercle', (0, 0.68, -0.35))
+cv.add(extrude(TOP_OUTLINE, 0.0012, (EX, YJ + 0.0006, CZ), (0, 1, 0), joint, 'joint-cuve'))          # (7)
+plate = extrude(TOP_OUTLINE, YT - YJ - 0.0012, (EX, (YT + YJ + 0.0012) / 2, CZ), (0, 1, 0), zamak_c, 'couvercle', bev=0.0015)
+c = cyl(0.0195, 0.03, (EX, YT, CZ), (0, 1, 0), None, 32)
+boolean(plate, c)
+apply_all(plate)
+delete(c)
+cv.add(plate)
+cv.add(lathe([(0.0195, 0.0), (0.023, 0.0), (0.023, HT - YT - 0.003), (0.0245, HT - YT - 0.002), (0.0245, HT - YT), (0.0195, HT - YT)], (EX, YT, CZ), (0, 1, 0), zamak_c, 40, 'cornet'))
+# volet de départ (2 de la coupe), monté excentré sur son axe : représenté ouvert (moteur chaud)
+cv.add(cyl(0.0022, 0.056, (EX - 0.004, CY + 0.083, CZ), (0, 0, 1), acier, 10, name='axe-volet'))
+cv.add(cyl(0.0185, 0.0009, (EX - 0.002, CY + 0.083, CZ), (math.cos(math.radians(20)), math.sin(math.radians(20)), 0), laiton_c, 28, name='volet-depart'))
+# levier de volet, serre-câble, patte de gaine et câble de starter (tirette au tableau de bord)
+vl = hull2d([(0.007 * math.cos(a), 0.007 * math.sin(a)) for a in [k * math.pi / 8 for k in range(16)]] +
+            [(0.020 + 0.005 * math.cos(a), -0.012 + 0.005 * math.sin(a)) for a in [k * math.pi / 8 for k in range(16)]])
+cv.add(extrude(vl, 0.0025, (EX - 0.004, CY + 0.083, CZ - 0.030), (0, 0, 1), acier, 'levier-volet'))
+cv.add(cyl(0.0035, 0.007, (EX + 0.016, CY + 0.071, CZ - 0.033), (0, 0, 1), laiton_c, 10, name='serre-cable'))
+cv.add(box((0.020, 0.004, 0.014), (EX + 0.034, CY + 0.071, CZ - 0.032), acier, bev=0.001, name='patte-gaine-starter'))
+cv.add(tube([(EX + 0.044, CY + 0.071, CZ - 0.032), (EX + 0.07, CY + 0.08, CZ - 0.06), (1.00, 0.82, -0.25), (0.86, 0.84, -0.33), (0.72, 0.83, -0.37)], 0.0022, noir, 'cable-starter', seg=6, res=10))
+# tringle d'ouverture positive : levier de volet → levier de papillon
+cv.add(tube([(EX + 0.008, CY + 0.076, CZ - 0.033), (EX + 0.006, CY + 0.050, CZ - 0.040), (EX + 0.004, CY + 0.024, CZ - 0.044)], 0.0011, acier, 'tringle-ouverture-positive', seg=6))
+# enrichisseur de pointe : tube calibré débouchant dans le cornet
+cv.add(tube([(EX + 0.017, YT, CZ), (EX + 0.017, YT + 0.016, CZ), (EX + 0.010, YT + 0.022, CZ)], 0.0016, laiton_c, 'enrichisseur', seg=6))
+# raccord d'arrivée d'essence avec filtre (1), au-dessus de la cuve, tourné vers la pompe (droite)
+cv.add(cyl(0.0065, 0.010, (BOWL_X + 0.006, YT + 0.005, CZ + 0.012), (0, 1, 0), zamak_c, 16, name='bossage-arrivee'))
+cv.add(extrude(hexagon(0.0065), 0.006, (BOWL_X + 0.006, YT + 0.006, CZ + 0.022), (0, 0, 1), laiton_c, 'raccord-arrivee'))
+cv.add(cyl(0.0032, 0.024, (BOWL_X + 0.006, YT + 0.006, CZ + 0.036), (0, 0, 1), laiton_c, 12, name='embout-arrivee'))
+# pointeau (3) vissé sous le couvercle, au-dessus de la languette du flotteur
+cv.add(extrude(hexagon(0.0045), 0.008, (BOWL_X - 0.008, YJ - 0.004, CZ + 0.008), (0, 1, 0), laiton_c, 'pointeau'))
+cv.add(tube([(BOWL_X - 0.008, YJ - 0.008, CZ + 0.008), (BOWL_X - 0.010, YJ - 0.0105, CZ)], 0.0010, acier, 'aiguille-pointeau', seg=6))
+cv.add(box((0.004, 0.008, 0.030), (BOWL_X - 0.015, YJ - 0.004, CZ), zamak_c, name='chape-flotteur'))
+# 5 vis de couvercle sur bossages
+VC = [(EX - 0.017, CZ - 0.021), (EX - 0.017, CZ + 0.021), (EX + 0.024, CZ - 0.026), (BOWL_X + 0.020, CZ - 0.022), (BOWL_X + 0.020, CZ + 0.022)]
+for vx, vz in VC:
+    cv.add(cyl(0.0055, 0.006, (vx, YT + 0.003, vz), (0, 1, 0), zamak_c, 16, name='bossage-vis'))
+fasteners(cv, 'vis-couvercle-carbu', [((vx, YT + 0.006, vz), (0, 1, 0)) for vx, vz in VC], kind='screw', r=0.0035, length=0.018, travel=0.03)
+
+# ---------------------------------------------------------------- filtre à air rond, sur le cornet
 af = Part('filtre-air', (0, 0.7, -0.15))
-AY = CY + 0.068
-af.add(lathe([(0.028, 0.0), (0.13, 0.0), (0.142, 0.006), (0.145, 0.02), (0.142, 0.034), (0.13, 0.04), (0.028, 0.04)], (EX, AY, -0.175), (0, 1, 0), noir, 48))
-af.add(lathe([(0.0, 0.058), (0.10, 0.055), (0.135, 0.046), (0.146, 0.036), (0.146, 0.03), (0.0, 0.03)], (EX, AY, -0.175), (0, 1, 0), noir, 48))   # couvercle
+AY = HT - 0.008
+af.add(lathe([(0.0235, -0.012), (0.027, -0.012), (0.027, 0.0), (0.13, 0.0), (0.142, 0.006), (0.145, 0.02), (0.142, 0.034), (0.13, 0.04), (0.0235, 0.04)], (EX, AY, CZ), (0, 1, 0), noir, 48))
+af.add(torus(0.0275, 0.0018, (EX, AY - 0.006, CZ), (0, 1, 0), acier, 32, 6, 'collier-cornet'))
+af.add(lathe([(0.0, 0.058), (0.10, 0.055), (0.135, 0.046), (0.146, 0.036), (0.146, 0.03), (0.0, 0.03)], (EX, AY, CZ), (0, 1, 0), noir, 48))   # couvercle
 for k in range(16):
     a = 2 * math.pi * k / 16
-    af.add(box((0.05, 0.004, 0.006), (EX + 0.085 * math.cos(a), AY + 0.059, -0.175 + 0.085 * math.sin(a)), noir, bev=0.0015))
-af.add(lathe([(0.11, 0.0), (0.13, 0.0), (0.13, 0.036), (0.11, 0.036)], (EX, AY + 0.002, -0.175), (0, 1, 0), M('papier', 0xd9cf9e, 0.0, 0.9), 48))   # élément filtrant
+    af.add(box((0.05, 0.004, 0.006), (EX + 0.085 * math.cos(a), AY + 0.059, CZ + 0.085 * math.sin(a)), noir, bev=0.0015))
+af.add(lathe([(0.11, 0.0), (0.13, 0.0), (0.13, 0.036), (0.11, 0.036)], (EX, AY + 0.002, CZ), (0, 1, 0), M('papier', 0xd9cf9e, 0.0, 0.9), 48))   # élément filtrant
 af.add(tube([(EX + 0.13, AY + 0.02, -0.21), (EX + 0.22, AY + 0.015, -0.30), (1.30, AY - 0.02, -0.40)], 0.035, noir, seg=14, res=8))   # prise d'air
-fastener(af, 'ecrou-filtre-air', (EX, AY + 0.062, -0.175), (0, 1, 0), kind='nut', r=0.013, length=0.03, travel=0.06, washer=False)
+fastener(af, 'ecrou-filtre-air', (EX, AY + 0.062, CZ), (0, 1, 0), kind='nut', r=0.013, length=0.03, travel=0.06, washer=False)
 
 # =====================================================================================
 # ALLUMAGE : allumeur, bougies, fils
@@ -577,7 +757,7 @@ pe.add(cyl(0.038, 0.006, (EX + 0.03, CAM_Y - 0.02, 0.155), (0, 0, 1), acier, 32)
 pe.add(cyl(0.025, 0.012, (EX + 0.03, CAM_Y - 0.02, 0.176), (0, 0, 1), acier, 28))
 for s in (1, -1):
     pe.add(cyl(0.004, 0.02, (EX + 0.03 + s * 0.02, CAM_Y + 0.01, 0.16), (0, 1, 0), alu, 10))
-pe.add(tube([(EX + 0.05, CAM_Y + 0.02, 0.16), (EX + 0.04, YD + 0.06, 0.13), (EX + 0.03, YH + 0.07, 0.0), (EX + 0.04, CY + 0.03, -0.14)], 0.0035, caoutchouc, seg=6))
+pe.add(tube([(EX + 0.05, CAM_Y + 0.02, 0.16), (EX + 0.04, YD + 0.06, 0.13), (EX + 0.03, YH + 0.07, 0.0), (EX + 0.05, CY + 0.075, -0.12), (EX + 0.05, CY + 0.0705, CZ + 0.05)], 0.0035, caoutchouc, seg=6))
 pe.add(tube([(EX + 0.01, CAM_Y + 0.02, 0.16), (EX + 0.005, CAM_Y + 0.045, 0.20), (EX - 0.005, CAM_Y + 0.063, 0.24), (EX - 0.015, CAM_Y + 0.067, 0.25)], 0.0035, caoutchouc, seg=6))   # arrivée du filtre à essence (soubassement.py)
 fasteners(pe, 'fix-pompe-essence', [((EX + 0.03 + s * 0.02, CAM_Y - 0.02, 0.139), (0, 0, 1)) for s in (1, -1)], kind='nut', r=0.006, length=0.02, travel=0.04)
 

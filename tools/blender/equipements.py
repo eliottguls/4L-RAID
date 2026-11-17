@@ -6,7 +6,7 @@
 # RTA : radiateur juste derrière la calandre, thermocontact en bas de la boîte à eau droite (p.38,
 # p.71) ; vase d'expansion taré 0,8 bar (p.37) ; batterie à l'avant droit, robinet sur la borne –
 # (photo p. VI) ; courroie poulie d'AAC → pompe à eau → alternateur (p.38, p.73) ; démarreur côté
-# droit contre le carter d'embrayage, trois boulons (p.73) ; fusibles sur le tablier (p.71) ;
+# GAUCHE sous le collecteur, nez dans le carter d'embrayage, écran thermique (p.73) ; fusibles sur le tablier (p.71) ;
 # maître-cylindre tandem Ø 20,6 sur le tablier, limiteur à l'arrière (p.67 à 70).
 # Les positions sont prises sur les photos du compartiment moteur ; dimensions estimées.
 import math
@@ -14,7 +14,8 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib import M, M_img, Part, box, cyl, export, fastener, fasteners, grid, lathe, quad, reset, solidify, torus, tube  # noqa: E402
+from lib import M, M_img, Part, box, cyl, export, extrude, fastener, fasteners, grid, hexagon, lathe, quad, reset, solidify, toothed, torus, tube  # noqa: E402
+from mathutils import Quaternion  # noqa: E402
 import tempfile  # noqa: E402
 
 reset()
@@ -50,6 +51,9 @@ fil = M('fil', 0x2a2a2a, 0.2, 0.6)
 fil_rouge = M('fil-rouge', 0x8a2a22, 0.1, 0.55)
 frein_liq = M('reservoir-frein', 0xe8e6d8, 0.0, 0.35, alpha=0.8)
 bleu = M('bobine', 0x2c3e55, 0.4, 0.4)
+bronze = M('coussinet', 0xc9a36a, 0.8, 0.3)
+acier_taille = M('acier-taille', 0xb7bcc0, 0.95, 0.22)
+bakelite = M('bakelite', 0x2a1f1b, 0.1, 0.35)
 
 # =====================================================================================
 # REFROIDISSEMENT (planche 11, p.38) : radiateur à boîtes à eau latérales (25), thermocontact (26)
@@ -197,7 +201,6 @@ for s in (1, -1):
 bat.add(cyl(0.011, 0.02, (BX - 0.07, BY + 0.104, BZ + 0.045), (0, 1, 0), M('plomb', 0x8d8f91, 0.6, 0.5), 14, name='borne+'))
 bat.add(cyl(0.010, 0.02, (BX + 0.07, BY + 0.104, BZ + 0.045), (0, 1, 0), M('plomb', 0x8d8f91, 0.6, 0.5), 14, name='borne-'))
 bat.add(box((0.035, 0.025, 0.03), (BX + 0.07, BY + 0.125, BZ + 0.045), rouge, 0.006, 'robinet'))   # coupe-batterie (repère 7)
-bat.add(tube([(BX - 0.07, BY + 0.12, BZ + 0.045), (BX - 0.15, BY + 0.10, BZ - 0.02), (1.30, 0.50, 0.25), (1.06, 0.40, 0.23)], 0.007, fil_rouge, seg=10, res=10))
 bat.add(tube([(BX + 0.07, BY + 0.135, BZ + 0.045), (BX + 0.12, BY + 0.10, BZ + 0.07), (BX + 0.12, BY - 0.05, BZ + 0.15)], 0.007, fil, seg=10))
 fasteners(bat, 'bornes-batterie', [((BX - 0.07, BY + 0.118, BZ + 0.045), (0, 1, 0)), ((BX + 0.07, BY + 0.118, BZ + 0.045), (0, 1, 0))], kind='nut', r=0.007, length=0.02, travel=0.05)
 
@@ -243,13 +246,109 @@ alt.add(tube([(PUL_X, y, z) for y, z in hull], 0.0045, caoutchouc, seg=6, res=2,
 fastener(alt, 'pivot-alternateur', (PUL_X - 0.04, AY_ - 0.075, AZ_ - 0.03), (1, 0, 0), kind='bolt', r=0.008, length=0.15, travel=0.20)
 fasteners(alt, 'tendeur-courroie', [((PUL_X - 0.10, AY_ + 0.065, AZ_ - 0.03), (0, 0.6, 0.8)), ((PUL_X - 0.10, 0.68, 0.06), (0, 1, 0))], kind='bolt', r=0.007, length=0.03, travel=0.04)
 
-dem = Part('demarreur', (0, -0.2, 0.45))
-SY, SZ = 0.335, 0.195
-dem.add(lathe([(0.0, -0.085), (0.04, -0.085), (0.046, -0.075), (0.046, 0.06), (0.04, 0.07), (0.0, 0.07)], (1.015, SY, SZ), (1, 0, 0), acier_noir, 32, 'carcasse'))
-dem.add(lathe([(0.0, -0.04), (0.042, -0.04), (0.042, 0.035), (0.03, 0.045), (0.0, 0.045)], (1.12, SY, SZ - 0.005), (1, 0, 0), alu, 28, 'nez'))
-dem.add(cyl(0.024, 0.085, (1.05, SY + 0.062, SZ + 0.01), (1, 0, 0), acier_noir, 24, name='solenoide'))
-dem.add(cyl(0.006, 0.015, (0.998, SY + 0.07, SZ + 0.02), (1, 0, 0), laiton, 10, name='plot'))
-fasteners(dem, 'vis-demarreur', [((1.17, SY + 0.04, SZ + 0.035), (1, 0, 0)), ((1.17, SY - 0.045, SZ + 0.02), (1, 0, 0)), ((0.93, SY, SZ + 0.03), (-1, 0, 0))], kind='bolt', r=0.008, length=0.05, travel=0.08)
+# Démarreur Paris-Rhône D 8 E 121 (planche 26, p.74) : côté GAUCHE, sous le collecteur, nez engagé
+# dans le carter d'embrayage. RTA p.73 : dépose après le filtre à air, la bride du tuyau
+# d'échappement et l'écran de protection du démarreur ; boulon haut (clé Elé 565) et boulon
+# inférieur à écrou (clé à rotule 3/8" + douille de 13, clé contre-coudée pour tenir l'écrou).
+# Repères de la vue éclatée : fourchette (1), solénoïde (2), pignon lanceur (3), plateau
+# porte-balais (4), inducteur (5), induit (6). Longueurs et diamètres estimés (Ø carcasse 78 mm).
+SA_Y, SA_Z = 0.412, -0.141           # axe du démarreur (voir moteur.py)
+RING_X = XF + 0.030                  # couronne du volant (96 dents)
+
+
+def sector(profile, x0, a0, a1, mat, name, seg=24, ax=(1, 0, 0)):
+    """Révolution autour de l'axe du démarreur, de a0 à a1 (degrés) : 0° = vers le bas,
+    90° = vers l'extérieur (gauche), 180° = vers le haut, 270° = vers le moteur."""
+    o = lathe(profile, (x0, SA_Y, SA_Z), ax, mat, seg, name, angle=math.radians(a1 - a0))
+    o.rotation_quaternion = o.rotation_quaternion @ Quaternion((0, 0, 1), math.radians(a0))
+    return o
+
+
+def on_axis(r, a, x):
+    """Point à `r` de l'axe du démarreur, angle `a` (même convention que sector)."""
+    t = math.radians(a)
+    return (x, SA_Y - r * math.cos(t), SA_Z - r * math.sin(t))
+
+
+def radial(a):
+    t = math.radians(a)
+    return (0, -math.cos(t), -math.sin(t))
+
+
+dem = Part('demarreur', (0, -0.12, -0.45))
+X_FL = XF                            # bride d'appui contre la face arrière du carter d'embrayage
+X_F0 = X_FL - 0.044                  # carter intermédiaire (fourchette)
+X_Y1 = X_F0 - 0.112                  # arrière de la carcasse
+# nez en alu : cône ouvert côté couronne (fenêtre d'engrènement), bague bronze en bout
+dem.add(sector([(0.0, 0.0), (0.036, 0.0), (0.036, 0.022), (0.030, 0.045), (0.018, 0.062), (0.011, 0.068), (0.0, 0.068)], X_FL, 325, 575, alu, 'nez', 40))
+dem.add(lathe([(0.0045, 0.0), (0.011, 0.0), (0.011, 0.008), (0.0045, 0.008)], (X_FL + 0.064, SA_Y, SA_Z), (1, 0, 0), bronze, 16, 'bague-nez'))
+# bride à deux oreilles (boulon haut, boulon bas)
+dem.add(lathe([(0.0, 0.0), (0.041, 0.0), (0.041, 0.008), (0.0, 0.008)], (X_FL - 0.002, SA_Y, SA_Z), (1, 0, 0), alu, 40, 'bride'))
+EARS = (162, 342)
+for a in EARS:
+    dem.add(cyl(0.011, 0.008, on_axis(0.048, a, X_FL + 0.002), (1, 0, 0), alu, 18, name='oreille-bride'))
+    dem.add(box((0.008, 0.016, 0.012), on_axis(0.040, a, X_FL + 0.002), alu, name='oreille-bride', axis=None))
+# pignon lanceur (3) au repos derrière la couronne, roue libre, ressort et arbre d'induit
+dem.add(toothed(9, 0.01215, 0.012, (RING_X - 0.016, SA_Y, SA_Z), (1, 0, 0), acier_taille, hole=0.005, name='pignon-lanceur'))
+dem.add(lathe([(0.0065, 0.0), (0.020, 0.0), (0.020, 0.020), (0.013, 0.024), (0.0065, 0.024)], (RING_X - 0.048, SA_Y, SA_Z), (1, 0, 0), acier, 24, 'roue-libre'))
+dem.add(cyl(0.006, X_FL + 0.068 - (X_Y1 - 0.02), ((X_FL + 0.068 + X_Y1 - 0.02) / 2, SA_Y, SA_Z), (1, 0, 0), acier, 14, name='arbre-induit'))
+# carter intermédiaire et fourchette (1) ; axe de fourchette visible sur le dessus
+dem.add(lathe([(0.0, 0.0), (0.040, 0.0), (0.040, 0.044), (0.0, 0.044)], (X_F0, SA_Y, SA_Z), (1, 0, 0), alu, 36, 'carter-fourchette'))
+dem.add(cyl(0.0045, 0.014, on_axis(0.040, 205, X_F0 + 0.022), radial(205), acier, 10, name='axe-fourchette'))
+# carcasse acier noir (inducteur 5), vis de masses polaires, bande de protection des balais
+dem.add(lathe([(0.0, 0.0), (0.039, 0.0), (0.039, X_F0 - X_Y1), (0.0, X_F0 - X_Y1)], (X_Y1, SA_Y, SA_Z), (1, 0, 0), acier_noir, 40, 'carcasse'))
+for a in (60, 240):
+    dem.add(cyl(0.0065, 0.004, on_axis(0.039, a, X_Y1 + 0.055), radial(a), acier, 12, name='vis-masse-polaire'))
+dem.add(lathe([(0.0392, 0.0), (0.0408, 0.0), (0.0408, 0.020), (0.0392, 0.020)], (X_Y1 + 0.004, SA_Y, SA_Z), (1, 0, 0), acier, 40, 'bande-balais'))
+dem.add(cyl(0.0035, 0.008, on_axis(0.044, 300, X_Y1 + 0.014), (1, 0, 0), acier, 10, name='vis-bande'))
+# plateau porte-balais (4) : palier arrière en alu, bossage de bague, tirants et leurs écrous
+dem.add(lathe([(0.0, 0.0), (0.037, 0.0), (0.037, 0.008), (0.030, 0.014), (0.014, 0.016), (0.014, 0.026), (0.010, 0.028), (0.0, 0.028)], (X_Y1, SA_Y, SA_Z), (-1, 0, 0), alu, 36, 'plateau-porte-balais'))
+for a in (110, 290):
+    p0 = on_axis(0.031, a, X_Y1 - 0.016)
+    dem.add(extrude(hexagon(0.0045), 0.004, p0, (1, 0, 0), acier, 'ecrou-tirant'))
+    dem.add(cyl(0.0022, X_FL - X_Y1, ((X_FL + X_Y1) / 2 - 0.006, p0[1], p0[2]), (1, 0, 0), acier, 8, name='tirant'))
+# patte arrière vissée sur le flanc du carter-cylindres
+P_X = X_Y1 - 0.022
+dem.add(box((0.006, 0.016, 0.040), (P_X, SA_Y + 0.020, SA_Z + 0.018), acier_noir, 0.001, 'patte-arriere'))
+dem.add(box((0.006, 0.030, 0.012), (P_X, SA_Y + 0.040, -0.113), acier_noir, 0.001, 'patte-arriere'))
+# solénoïde (2) sur le dessus : corps, capot bakélite, gros plots (batterie, inducteur), cosse +
+SOL = on_axis(0.062, 180, 0)
+SX0, SX1 = X_FL - 0.020, X_FL - 0.094
+dem.add(lathe([(0.0, 0.0), (0.022, 0.0), (0.022, SX0 - SX1 - 0.012), (0.0, SX0 - SX1 - 0.012)], (SX0, SOL[1], SOL[2]), (-1, 0, 0), acier_noir, 32, 'solenoide'))
+dem.add(lathe([(0.0, 0.0), (0.0215, 0.0), (0.0215, 0.008), (0.018, 0.012), (0.0, 0.012)], (SX1 + 0.012, SOL[1], SOL[2]), (-1, 0, 0), bakelite, 32, 'capot-solenoide'))
+dem.add(box((0.040, 0.014, 0.030), on_axis(0.044, 180, SX0 - 0.03), acier_noir, 0.002, 'semelle-solenoide'))
+BAT_T = (SX1 - 0.004, SOL[1] + 0.009, SOL[2] - 0.006)      # plot batterie (haut)
+MOT_T = (SX1 - 0.004, SOL[1] - 0.010, SOL[2] + 0.004)      # plot vers l'inducteur
+for p in (BAT_T, MOT_T):
+    dem.add(cyl(0.0035, 0.016, p, (1, 0, 0), laiton, 10, name='plot'))
+dem.add(box((0.003, 0.010, 0.006), (SX1 + 0.002, SOL[1] - 0.004, SOL[2] - 0.016), laiton, name='cosse-commande'))
+# barrette cuivre : plot du solénoïde → borne d'inducteur sur la carcasse
+FT = on_axis(0.041, 180, X_Y1 + 0.03)
+dem.add(tube([(MOT_T[0] - 0.006, MOT_T[1], MOT_T[2]), (MOT_T[0] - 0.012, MOT_T[1] - 0.004, MOT_T[2]), (FT[0] + 0.01, FT[1] + 0.004, FT[2]), FT], 0.0025, cuivre, 'barrette-inducteur', seg=6))
+dem.add(cyl(0.006, 0.006, FT, (0, 1, 0), bakelite, 12, name='borne-inducteur'))
+fasteners(dem, 'ecrous-bornes-demarreur', [((BAT_T[0] - 0.006, BAT_T[1], BAT_T[2]), (-1, 0, 0)), ((MOT_T[0] - 0.006, MOT_T[1], MOT_T[2]), (-1, 0, 0))], kind='nut', r=0.0055, length=0.012, travel=0.03, washer=False)
+# fixations : boulon haut (clé Elé 565), boulon bas et son écrou côté carter d'embrayage, patte arrière
+fx_dem = [(on_axis(0.048, EARS[0], X_FL - 0.002), (-1, 0, 0)), (on_axis(0.048, EARS[1], X_FL - 0.002), (-1, 0, 0)),
+          ((P_X, SA_Y + 0.040, -0.120), (0, 0, -1))]
+fasteners(dem, 'vis-demarreur', fx_dem, kind='bolt', r=0.0075, length=0.05, travel=0.08)
+fastener(dem, 'ecrou-demarreur', on_axis(0.048, EARS[1], XF + 0.014), (1, 0, 0), kind='nut', r=0.0075, length=0.012, travel=0.05)
+
+# écran de protection du démarreur : tôle cintrée entre la descente d'échappement et le démarreur
+ecr = Part('ecran-demarreur', (0, 0.06, -0.32))
+E0, E1 = X_Y1 + 0.006, X_FL - 0.012
+tole_alu = M('tole-aluminiee', 0xb7bab6, 0.75, 0.4)
+ecr.add(sector([(0.050, 0.0), (0.0512, 0.0), (0.0512, E1 - E0), (0.050, E1 - E0), (0.050, 0.0)], E0, 52, 150, tole_alu, 'tole-ecran', 24))
+for a in (52, 150):   # bords tombés
+    ecr.add(box((E1 - E0, 0.0012, 0.008), on_axis(0.046, a, (E0 + E1) / 2), tole_alu, name='bord-ecran', axis=None))
+ecr.add(sector([(0.0402, 0.0), (0.0415, 0.0), (0.0415, 0.012), (0.0402, 0.012)], (E0 + E1) / 2 - 0.006, 0, 360, acier, 'collier-ecran', 32))
+ecr.add(box((0.012, 0.008, 0.010), on_axis(0.046, 101, (E0 + E1) / 2), acier, 0.001, 'patte-collier', axis=None))
+fastener(ecr, 'vis-ecran-demarreur', on_axis(0.052, 101, (E0 + E1) / 2), radial(101), kind='bolt', r=0.005, length=0.012, travel=0.03)
+
+# câble de batterie (+) : borne + (avant droit) → plot du solénoïde, par l'avant de la boîte
+bat.add(tube([(BX - 0.07, BY + 0.12, BZ + 0.045), (BX - 0.13, BY + 0.10, BZ - 0.01), (1.47, 0.70, 0.20), (1.46, 0.62, 0.0),
+              (1.40, 0.60, -0.18), (1.25, 0.56, -0.25), (1.10, 0.52, -0.21), (BAT_T[0] - 0.015, BAT_T[1] + 0.012, BAT_T[2] - 0.01),
+              (BAT_T[0] - 0.008, BAT_T[1], BAT_T[2])], 0.007, fil_rouge, 'cable-batterie', seg=10, res=12))
+bat.add(box((0.004, 0.018, 0.016), (BAT_T[0] - 0.007, BAT_T[1], BAT_T[2]), cuivre, 0.001, 'cosse-cable'))
 
 fus = Part('fusibles', (0.25, 0.3, 0))
 fus.add(box((0.035, 0.07, 0.17), (TABLIER_X + 0.02, 0.84, -0.20), noir, 0.006, 'platine'))
@@ -263,6 +362,46 @@ bob.add(lathe([(0.0, -0.07), (0.03, -0.07), (0.03, 0.06), (0.02, 0.075), (0.0, 0
 bob.add(box((0.02, 0.10, 0.07), (TABLIER_X + 0.012, 0.80, 0.20), acier_noir, 0.004, 'collier'))
 bob.add(cyl(0.006, 0.025, (TABLIER_X + 0.05, 0.89, 0.20), (0, 1, 0), noir, 12, name='sortie-ht'))
 bob.add(tube([(TABLIER_X + 0.05, 0.90, 0.20), (0.80, 0.86, 0.15), (0.84, 0.80, 0.11)], 0.004, noir, seg=6))   # fil HT vers l'allumeur
+
+# =====================================================================================
+# PLAQUES D'IDENTIFICATION (RTA p.5 / PDF p.19 et photo) : plaque constructeur rivée sur le
+# tablier côté droit, plaque ovale sur le tablier côté gauche, référence peinture sur le côté
+# d'auvent droit (la plaque moteur est sur le bloc, moteur.py ; la plaque de boîte sur le
+# couvercle avant de boîte, transmission.py). Champs de numéros laissés vides.
+# =====================================================================================
+def id_png(name, size, bg, lines, oval=False):
+    from PIL import Image, ImageDraw, ImageFont
+    w, h = size
+    im = Image.new('RGB', (w, h), (40, 40, 40) if oval else bg)
+    d = ImageDraw.Draw(im)
+    if oval:
+        d.ellipse((2, 2, w - 3, h - 3), fill=bg, outline=(90, 90, 90), width=4)
+    else:
+        d.rectangle((2, 2, w - 3, h - 3), outline=(90, 90, 90), width=4)
+        for cx, cy in ((14, 14), (w - 14, 14), (14, h - 14), (w - 14, h - 14)):
+            d.ellipse((cx - 6, cy - 6, cx + 6, cy + 6), fill=(150, 150, 150))
+    fp = next((f for f in ('/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed-Bold.ttf', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf') if os.path.exists(f)), '')
+    y = 0
+    for txt, sz in lines:
+        y += sz * 0.6
+        font = ImageFont.truetype(fp, sz) if fp else None
+        d.text((w / 2, y + h * 0.08), txt, fill=(25, 25, 25), font=font, anchor='mm')
+        y += sz * 0.75
+    path = os.path.join(tempfile.mkdtemp(prefix='id-'), name + '.png')
+    im.save(path)
+    return path
+
+
+pid = Part('plaques-identification', (0.12, 0.1, 0))
+alu_id = (214, 214, 206)
+pc = M_img('plaque-constructeur', id_png('constructeur', (400, 300), alu_id, [('RÉGIE NATIONALE', 30), ('DES USINES RENAULT', 30), ('◇ 112800 (R 1128)', 34), ('N° ············', 30), ('PTAC ····· kg', 26), ('PTR ····· kg', 26), ('1 – ··· kg   2 – ··· kg', 26)]), 0.6, 0.4)
+pid.add(quad((TABLIER_X + 0.004, 0.72, 0.36), 0.10, 0.075, (1, 0, 0), pc, 'plaque-constructeur'))
+po = M_img('plaque-ovale', id_png('ovale', (360, 200), alu_id, [('R 1128', 52), ('· · · ·', 34), ('N° ··········', 30)], oval=True), 0.6, 0.4)
+pid.add(quad((TABLIER_X + 0.004, 0.87, -0.06), 0.09, 0.05, (1, 0, 0), po, 'plaque-ovale'))
+pp = M_img('reference-peinture', id_png('peinture', (300, 120), (236, 233, 222), [('PEINTURE', 34), ('réf. ·····', 34)]), 0.0, 0.6)
+pid.add(quad((TABLIER_X + 0.004, 0.93, 0.47), 0.06, 0.024, (1, 0, 0), pp, 'reference-peinture'))
+for zz, yy in ((0.36 - 0.044, 0.72 + 0.031), (0.36 + 0.044, 0.72 + 0.031), (0.36 - 0.044, 0.72 - 0.031), (0.36 + 0.044, 0.72 - 0.031), (-0.06 - 0.038, 0.87), (-0.06 + 0.038, 0.87)):
+    pid.add(cyl(0.0028, 0.002, (TABLIER_X + 0.0045, yy, zz), (1, 0, 0), acier, 10, name='rivet'))
 
 lg = Part('lave-glace', (0, 0.4, 0.3))
 lg.add(box((0.12, 0.13, 0.085), (1.26, 0.77, 0.475), plastique, 0.02, 'reservoir'))
