@@ -1,5 +1,5 @@
 // Cache hors-ligne : une fois le site ouvert avec du réseau, il marche sans (pratique en plein désert).
-const VERSION = 'manuel-4l-v7';
+const VERSION = 'manuel-4l-v8';
 const ASSETS = [
   './', 'index.html', 'css/style.css',
   'js/app.js', 'js/car.js', 'js/data.js', 'js/rta.js',

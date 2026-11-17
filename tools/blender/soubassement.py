@@ -291,8 +291,9 @@ fasteners(fe, 'colliers-filtre-essence', [((FIL[0] - 0.035, FIL[1] + 0.009, FIL[
 # ÉCHAPPEMENT (planche 9) : descente à bride à ressorts, silencieux sous le compartiment moteur,
 # tuyau intermédiaire, tuyau arrière sur suspente, sortie arrière gauche
 # =====================================================================================
-B0 = (EX + 0.02, YD - 0.13, -0.16)      # bride du collecteur (moteur.py)
-MX0, MX1, MY, MZ = 0.74, 1.08, 0.325, -0.20   # silencieux
+B0 = (EX + 0.02, YD - 0.13, -0.19)      # bride du collecteur (moteur.py), au-dessus du démarreur
+ZI = -0.225                             # entrée du silencieux, à l'extérieur du démarreur
+MX0, MX1, MY, MZ = 0.74, 1.08, 0.315, -0.20   # silencieux (sous le démarreur)
 ex = Part('echappement', (0, -0.35, -0.2))
 # ---- descente (6) : rotule à portée sphérique, bride (5), ressorts et écrous
 ex.add(lathe([(0.017, 0.0), (0.024, 0.0), (0.027, 0.008), (0.022, 0.014), (0.017, 0.014)], (B0[0], B0[1] - 0.004, B0[2]), (0, -1, 0), ech_chaud, 24, 'portee-spherique'))
@@ -304,7 +305,8 @@ for s in (1, -1):
         a = 2 * math.pi * 5 * i / 40
         pts.append((B0[0] + s * 0.045 + 0.007 * math.cos(a), B0[1] - 0.028 - 0.020 * i / 40, B0[2] + 0.007 * math.sin(a)))
     ex.add(tube(pts, 0.0012, M('ressort', 0x6d7d8a, 0.8, 0.35), 'ressort-bride', seg=4, res=2))
-desc = [(B0[0], B0[1] - 0.018, B0[2]), (B0[0] + 0.005, B0[1] - 0.05, B0[2] - 0.01), (0.985, 0.41, -0.185), (1.005, 0.39, -0.198), (1.01, MY + 0.05, MZ)]
+# la descente plonge vers l'extérieur pour contourner le démarreur et son écran thermique
+desc = [(B0[0], B0[1] - 0.018, B0[2]), (B0[0] + 0.002, B0[1] - 0.04, B0[2] - 0.018), (0.955, 0.405, ZI), (0.985, 0.39, ZI), (1.01, MY + 0.05, ZI)]
 ex.add(tube(desc, 0.019, ech_chaud, 'descente', seg=14, res=10))
 fasteners(ex, 'ecrous-descente', [((B0[0] + s * 0.045, B0[1] - 0.050, B0[2]), (0, -1, 0)) for s in (1, -1)], kind='nut', r=0.006, length=0.012, travel=0.04)
 # ---- tuyau intermédiaire (10) : sortie du silencieux par-dessous, descente sous le plancher
@@ -318,7 +320,7 @@ ex.add(lathe([(0.0175, 0.0), (0.0195, 0.0), (0.0195, 0.03), (0.0175, 0.03)], (-1
 ex.add(lathe([(0.0185, 0.0), (0.0215, 0.0), (0.0215, 0.05), (0.0185, 0.05)], (0.40, 0.24, MZ), (1, 0, 0), ech, 20, 'emmanchement'))   # tuyau 12 sur tuyau 10
 # ---- colliers (7, 9) : étrier en U, platine, écrous ; suspentes élastiques (11)
 cx_ = []
-for p in ((1.01, MY + 0.07, MZ), (0.42, 0.24, MZ)):
+for p in ((1.01, MY + 0.07, ZI), (0.42, 0.24, MZ)):
     vertical = p[0] > 1.0
     ax = (0, 1, 0) if vertical else (1, 0, 0)
     ex.add(torus(0.0215, 0.003, p, ax, acier, 24, 6, 'collier-etrier'))
@@ -352,7 +354,7 @@ for xe in (MX0 + 0.006, MX1 - 0.006):
 for k in range(5):   # nervures transversales
     si.add(extrude(rounded_rect(0.174, 0.104, 0.046, 6), 0.010, (MX0 + 0.05 + k * (L - 0.10) / 4, MY, MZ), (1, 0, 0), ech, 'nervure'))
 si.add(box((L - 0.06, 0.003, 0.05), ((MX0 + MX1) / 2, MY + 0.051, MZ), ech, 0.001, 'agrafure'))
-si.add(cyl(0.021, 0.035, (1.01, MY + 0.052, MZ), (0, 1, 0), ech, 18, name='entree'))
+si.add(cyl(0.021, 0.035, (1.01, MY + 0.052, ZI), (0, 1, 0), ech, 18, name='entree'))
 si.add(cyl(0.021, 0.035, (0.78, MY - 0.052, MZ), (0, 1, 0), ech, 18, name='sortie'))
 si.add(box((0.03, 0.006, 0.03), (0.80, MY + 0.03, MZ - 0.095), acier_noir, 0.002, 'oreille-suspente'))
 
