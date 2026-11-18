@@ -21,6 +21,8 @@ const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffe
 renderer.setSize(innerWidth, innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 document.body.appendChild(renderer.domElement);
+// coupe : clip=z,0.0 garde ce qui est en dessous de z = 0 (axe x/y/z du site, valeur en m) ; clip=-z,0 garde le dessus
+{ const c = new URLSearchParams(location.search).get('clip'); if (c) { const [ax, v] = c.split(','); const sg = ax.startsWith('-') ? -1 : 1; const n = { x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1] }[ax.replace('-', '')].map((k) => -k * sg); renderer.clippingPlanes = [new THREE.Plane(new THREE.Vector3(...n), sg * Number(v))]; } }
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x24211e);
 scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;

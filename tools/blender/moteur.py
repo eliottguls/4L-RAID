@@ -104,39 +104,98 @@ BLOCK_SEC = [(ZB_CAM, 0.188), (0.088, 0.172), (0.100, 0.150), (0.102, 0.116), (0
              (0.092, 0.045), (0.112, 0.024), (0.136, 0.008), (0.138, -0.005), (-0.100, -0.005), (-0.100, 0.008),
              (-0.092, 0.030), (-0.081, 0.075), (-0.078, 0.150), (ZB_COL, 0.188)]
 body = extrude([(-z, h) for z, h in BLOCK_SEC], XF - XR, (EX, YC, 0), (1, 0, 0), fonte, bev=0.004, up=(0, 1, 0))
-# chambre des chemises : ouverte en haut (chemises humides), alésages d'embase
-water = box((XF - XR - 0.03, 0.15, 0.135), (EX, YD - 0.075 + 0.001, ZC), None)
-boolean(body, water)
-apply_all(body)
-delete(water)
+
+
+def drill(o, cutters):
+    for c in cutters:
+        boolean(o, c)
+        apply_all(o)
+        delete(c)
+
+
+def rod_line(a, b, r, ext=0.0, seg=12):
+    """Cylindre de perçage le long du segment a-b (prolongé de ext à chaque bout)."""
+    d = [b[k] - a[k] for k in range(3)]
+    L = math.sqrt(sum(v * v for v in d))
+    u = [v / L for v in d]
+    mid = [(a[k] + b[k]) / 2 for k in range(3)]
+    return cyl(r, L + 2 * ext, tuple(mid), tuple(u), None, seg)
+
+
+# Intérieur (fonte creuse, coupe B-21). Chemises humides : la chambre d'eau entoure les chemises
+# sur toute leur hauteur, de leur embase (plancher percé à Ø 75,5 sur lequel porte le joint d'embase)
+# jusqu'au plan de joint ; sous le plancher, le carter-vilebrequin ouvert vers le carter inférieur.
+H_EMB = 0.046                 # dessous du plancher d'embase (bas des chemises), au-dessus de l'axe
+H_WAT = H_EMB + 0.010         # dessus du plancher = fond de la chambre d'eau
+WZ0, WZ1 = -0.066, 0.052      # flancs intérieurs de la chambre d'eau (côté collecteur / côté arbre à cames)
+CRANK_SEC = [(0.085, H_EMB), (0.085, 0.030), (0.104, 0.016), (0.128, 0.004), (0.128, -0.010),
+             (-0.092, -0.010), (-0.092, 0.010), (-0.085, 0.030), (-0.080, H_EMB)]
+cav = extrude([(-z, h) for z, h in CRANK_SEC], XF - XR - 0.016, (EX, YC, 0), (1, 0, 0), None, up=(0, 1, 0))
+water = box((XF - XR - 0.022, YD - YC - H_WAT + 0.002, WZ1 - WZ0), (EX, YC + (H_WAT + YD - YC + 0.002) / 2, (WZ0 + WZ1) / 2), None)
+seats = [cyl(0.0378, 0.03, (X(i), YC + H_EMB + 0.005, 0), (0, 1, 0), None, 40) for i in range(4)]
+# galerie d'arbre à cames (alésages des paliers Ø 39) et galerie principale de graissage côté arbre à cames
+cam_bore = cyl(0.0196, XF - XR + 0.02, (EX, CAM_Y, CAM_Z), (1, 0, 0), None, 28)
+OIL_G = (YC + 0.075, 0.074)   # galerie principale : (y, z), percée de bout en bout
+gallery = cyl(0.0045, XF - XR + 0.01, (EX, OIL_G[0], OIL_G[1]), (1, 0, 0), None, 12)
+drill(body, [cav, water, cam_bore, gallery] + seats)
 # dégagement venu de fonderie le long du démarreur (flanc gauche, côté volant)
 pocket = cyl(0.044, 0.19, (XF - 0.085, SA_Y, SA_Z), (1, 0, 0), None, 28)
 boolean(body, pocket)
 apply_all(body)
 delete(pocket)
+# Tiges de culbuteurs : passent du bossage des poussoirs à la culasse en traversant le plan de joint
+PUSH_Z_TOP = 0.040
+ROCK_Y = YH + 0.050
+
+
+def pushrod_ends(x):
+    return (x, CAM_Y + 0.048, CAM_Z), (x, ROCK_Y - 0.006, PUSH_Z_TOP)
+
+
+VALVE_X = [X(i) + s for i in range(4) for s in (0.017, -0.017)]
+# passages d'eau du plan de joint vers la culasse (entre la chemise et la paroi, des deux côtés)
+WATER_HOLES = [(X(i) + dx, z) for i in range(4) for dx, z in ((0.0, WZ1 - 0.006), (0.0, WZ0 + 0.007))] + [(XR + 0.012, 0.0), (XF - 0.012, 0.0)]
+drill(body, [rod_line(*pushrod_ends(x), 0.0055) for x in VALVE_X])
 bloc.add(body)
-# Plan de joint usiné, percé des 4 chemises
+# Plan de joint usiné, percé des 4 chemises, des passages d'eau et des 8 tiges de culbuteurs
 deck = extrude(rounded_rect(XF - XR, ZB_CAM - ZB_COL, 0.006), 0.006, (EX, YD - 0.003, ZC), (0, 1, 0), fonte_usinee)
-for i in range(4):
-    c = cyl(0.0405, 0.05, (X(i), YD, 0), (0, 1, 0), None, 40)
-    boolean(deck, c)
-    apply_all(deck)
-    delete(c)
+drill(deck, [cyl(0.0405, 0.05, (X(i), YD, 0), (0, 1, 0), None, 40) for i in range(4)]
+      + [cyl(0.0045, 0.03, (x, YD, z), (0, 1, 0), None, 12) for x, z in WATER_HOLES]
+      + [rod_line(*pushrod_ends(x), 0.0055) for x in VALVE_X])
 bloc.add(deck)
+# Cloisons de paliers (5) : voiles de fonte qui ferment le carter-vilebrequin au droit de chaque
+# tourillon, alésées pour les coussinets (Ø 57) ; les chapeaux sont avec le vilebrequin
+JOURNALS = [XF - 0.012, X(0) - PITCH / 2, EX, X(2) - PITCH / 2, XR + 0.012]
+WEB_SEC = [(z, max(h, -0.005)) for z, h in CRANK_SEC]
+for x in JOURNALS:
+    web = extrude([(-z, h) for z, h in WEB_SEC], 0.020, (x, YC, 0), (1, 0, 0), fonte, up=(0, 1, 0))
+    drill(web, [cyl(0.0285, 0.03, (x, YC, 0), (1, 0, 0), None, 40),
+                rod_line((x, OIL_G[0], OIL_G[1]), (x, YC + 0.022, 0.018), 0.0028)])   # perçage d'huile galerie → palier
+    bloc.add(web)
+# bouchons de galerie de graissage et de galerie d'arbre à cames (bouts)
+for x in (XF + 0.001, XR - 0.001):
+    bloc.add(cyl(0.006, 0.004, (x, OIL_G[0], OIL_G[1]), (1, 0, 0), acier_noir, 12))
 # Nervures verticales côté gauche (entre cylindres) et côté droit
 for x in [XF - 0.005, X(0) - PITCH / 2, X(1) - PITCH / 2, X(2) - PITCH / 2, XR + 0.005]:
     bloc.add(box((0.012, 0.11, 0.010), (x, YD - 0.075, ZB_COL - 0.007), fonte, bev=0.003))
-# Galerie d'arbre à cames côté droit et bossages des poussoirs
-bloc.add(cyl(0.026, XF - XR - 0.01, (EX, CAM_Y, CAM_Z), (1, 0, 0), fonte, 28))
-bloc.add(box((XF - XR - 0.02, 0.05, 0.03), (EX, CAM_Y + 0.035, CAM_Z + 0.01), fonte, bev=0.005))
-# Bossage d'allumeur / pompe à huile (droite, entre les cylindres 2 et 3), de filtre et de pompe à essence
-bloc.add(cyl(0.022, 0.05, (EX, CAM_Y + 0.07, CAM_Z + 0.032), (0, 1, 0), fonte, 24))
+# Galerie d'arbre à cames côté droit (alésée Ø 39) et bossage des poussoirs (alésages Ø 19)
+gal = cyl(0.026, XF - XR - 0.01, (EX, CAM_Y, CAM_Z), (1, 0, 0), fonte, 28)
+drill(gal, [cyl(0.0196, XF - XR + 0.02, (EX, CAM_Y, CAM_Z), (1, 0, 0), None, 28)])
+bloc.add(gal)
+tb = box((XF - XR - 0.02, 0.05, 0.03), (EX, CAM_Y + 0.035, CAM_Z + 0.01), fonte, bev=0.005)
+drill(tb, [cyl(0.0098, 0.07, (x, CAM_Y + 0.04, CAM_Z), (0, 1, 0), None, 20) for x in VALVE_X]
+      + [cyl(0.0196, XF - XR + 0.02, (EX, CAM_Y, CAM_Z), (1, 0, 0), None, 28)])
+bloc.add(tb)
+# Bossage d'allumeur et colonne de l'arbre de commande de pompe à huile (droite, entre les cylindres
+# 2 et 3), venus de fonderie, alésés pour l'arbre
+PX, PZ = EX, CAM_Z + 0.032
+for o in (cyl(0.022, 0.05, (EX, CAM_Y + 0.07, PZ), (0, 1, 0), fonte, 24),
+          cyl(0.014, CAM_Y - YC - 0.01, (EX, (CAM_Y + YC - 0.005) / 2 - 0.004, PZ), (0, 1, 0), fonte, 20)):
+    drill(o, [cyl(0.0058, 0.3, (EX, CAM_Y, PZ), (0, 1, 0), None, 14)])
+    bloc.add(o)
 bloc.add(cyl(0.038, 0.03, (EX - 0.075, YC + 0.052, 0.112), (0, 0, 1), fonte, 32))   # portée de filtre
 bloc.add(cyl(0.030, 0.012, (EX - 0.075, YC + 0.052, 0.128), (0, 0, 1), fonte_usinee, 32))
 bloc.add(box((0.06, 0.05, 0.02), (EX + 0.03, CAM_Y - 0.02, 0.105), fonte, bev=0.004))     # pompe à essence
-# Paliers de vilebrequin vus de dessous (5 cloisons)
-for x in [XF - 0.012, X(0) - PITCH / 2, EX, X(2) - PITCH / 2, XR + 0.012]:
-    bloc.add(box((0.022, 0.03, 0.17), (x, YC + 0.005, 0), fonte, bev=0.003))
 # Bouchons de dessablage (pastilles) côté gauche
 for x in (X(0) - 0.02, X(3) + 0.02):
     bloc.add(cyl(0.016, 0.006, (x, YD - 0.085, ZB_COL - 0.005), (0, 0, 1), acier_noir, 24))
@@ -195,9 +254,15 @@ for i in range(4):
     r = STROKE / 2
     yp_pin = YC + r * math.cos(ang) + math.sqrt(ROD ** 2 - (r * math.sin(ang)) ** 2)
     top = yp_pin + 0.0235   # hauteur de compression : piston au PMH à 0,5 mm sous le plan de joint (B-21)
-    pist = lathe([(0, top - yp_pin), (0.0345, top - yp_pin), (0.0349, top - yp_pin - 0.004), (0.0349, -0.040), (0.033, -0.041), (0.0, -0.035)],
-                 (x, yp_pin, 0), (0, 1, 0), alu_usine, 40)
+    # piston creux : calotte plate de 7 mm, jupe de 3,5 mm, deux bossages d'axe venus de fonderie
+    ct = top - yp_pin
+    pist = lathe([(0, ct), (0.0345, ct), (0.0349, ct - 0.004), (0.0349, -0.040), (0.0314, -0.040), (0.0314, ct - 0.024),
+                  (0.030, ct - 0.007), (0.0, ct - 0.007)], (x, yp_pin, 0), (0, 1, 0), alu_usine, 40)
     chem.add(pist)
+    for sz in (1, -1):
+        chem.add(cyl(0.012, 0.019, (x, yp_pin + 0.002, sz * 0.0215), (0, 0, 1), alu_usine, 20))
+        chem.add(box((0.016, ct - 0.007 - 0.002, 0.008), (x, yp_pin + 0.002 + (ct - 0.007 - 0.002) / 2, sz * 0.024), alu_usine))   # nervure bossage → calotte
+        chem.add(torus(0.0085, 0.0008, (x, yp_pin, sz * 0.0285), (0, 0, 1), acier_noir, 16, 4))   # jonc d'arrêt d'axe
     for k, h in enumerate((0.006, 0.0115, 0.018)):  # segments : coup de feu, étanchéité, racleur
         chem.add(torus(0.0349, 0.0011 if k < 2 else 0.0016, (x, top - h, 0), (0, 1, 0), acier_noir, 40, 6))
     chem.add(cyl(0.009, 0.059, (x, yp_pin, 0), (0, 0, 1), acier, 20))   # axe Ø 18 × 59
@@ -216,6 +281,8 @@ for i in range(4):
     # pied (Ø 18), corps en I, tête (Ø 44) avec chapeau
     biel.add(cyl(0.015, 0.022, (x, yp_pin, 0), (0, 0, 1), acier, 24))
     shank = extrude([(-0.011, 0.0), (0.011, 0.0), (0.016, -ROD + 0.03), (-0.016, -ROD + 0.03)], 0.018, (x, yp_pin, 0), (1, 0, 0), acier, up=(0, 1, 0))
+    # section en I : un évidement sur chaque face, l'âme fait 6 mm
+    drill(shank, [box((0.006, ROD - 0.07, 0.014), (x + sx * 0.0075, yp_pin - ROD / 2 + 0.005, 0), None) for sx in (1, -1)])
     biel.add(shank)
     biel.add(box((0.022, 0.02, 0.068), (x, pin[0] + 0.012, 0), acier, bev=0.004))
     cap = lathe([(0.022, -0.011), (0.034, -0.011), (0.034, 0.011), (0.022, 0.011)], (x, pin[0], 0), (1, 0, 0), acier, 32, angle=math.pi)
@@ -302,11 +369,9 @@ aac.add(lathe([(0.012, -0.009), (0.05, -0.009), (0.05, -0.006), (0.044, 0.0), (0
 
 culb = Part('culbuterie', (0, 0.7, 0.05))
 # poussoirs Ø 19 au-dessus de l'arbre à cames, tiges 173 × Ø 5 jusqu'aux culbuteurs
-ROCK_Y = YH + 0.050
 ROCK_Z = 0.010
 VALVE_Z = -0.008
 CH_D = 0.009          # profondeur des chambres « baignoire » (volume 33,3 cm³, p.20)
-PUSH_Z_TOP = 0.040
 rockers_adj = []
 for n, (x, adm) in enumerate(VALVES):
     yt = CAM_Y + 0.020
@@ -359,11 +424,9 @@ for x, adm in VALVES:
 # =====================================================================================
 jc = Part('joint-culasse', (0, 0.45, 0))
 gasket = extrude(rounded_rect(XF - XR - 0.004, ZB_CAM - ZB_COL - 0.004, 0.01), 0.0015, (EX, YD + 0.00075, ZC), (0, 1, 0), joint_cul)
-for i in range(4):
-    c = cyl(0.036, 0.02, (X(i), YD, 0), (0, 1, 0), None, 36)
-    boolean(gasket, c)
-    apply_all(gasket)
-    delete(c)
+drill(gasket, [cyl(0.036, 0.02, (X(i), YD, 0), (0, 1, 0), None, 36) for i in range(4)]
+       + [cyl(0.0045, 0.02, (x, YD, z), (0, 1, 0), None, 12) for x, z in WATER_HOLES]
+       + [rod_line(*pushrod_ends(x), 0.0055) for x in VALVE_X])
 jc.add(gasket)
 for i in range(4):
     jc.add(torus(0.0365, 0.0012, (X(i), YD + 0.0008, 0), (0, 1, 0), acier, 40, 6))
@@ -378,6 +441,11 @@ pocket = box((XF - XR - 0.02, 0.03, 0.11), (EX, YH, 0.002), None)
 boolean(hb, pocket)
 apply_all(hb)
 delete(pocket)
+# chambre d'eau : noyaux entre les cylindres et aux bouts (au-dessus des passages du joint), dégagés
+# des vis de culasse ; passages des tiges de culbuteurs vers la rampe
+drill(hb, [box((0.012, 0.034, 0.07), (x, YD + 0.0035 + 0.017, 0.0), None) for x in [X(0) + PITCH / 2] + [X(i) - PITCH / 2 for i in range(4)]]
+      + [box((XF - XR - 0.03, 0.012, 0.008), (EX, YD + 0.008, WZ1 - 0.006), None)]
+      + [rod_line(*pushrod_ends(x), 0.0055) for x in VALVE_X])
 # chambres de combustion en baignoire sous chaque paire de soupapes, conduits d'admission et d'échappement
 for i in range(4):
     for c in (box((0.064, 0.02, 0.044), (X(i), YD + 0.0015 + CH_D - 0.01, VALVE_Z - 0.004), None, bev=0.008),
@@ -436,21 +504,34 @@ sump = Part('carter-huile', (0, -0.45, 0))
 # coupe MR 175 B-21 : plan de joint à l'axe du vilebrequin, cuve profonde de 134 mm décalée côté
 # arbre à cames (de -82 à +122 mm), large rebord de pose (-100 à +138 mm)
 YS = YC - 0.005
-SZ0, SZ1 = -0.082, 0.122
+SZ0, SZ1 = -0.082, 0.126   # côté droit : 4 mm de plus que B-21 pour loger la pompe à huile
 sprof = [(-0.100, 0.0), (0.138, 0.0), (0.138, -0.004), (SZ1 + 0.004, -0.008), (SZ1, -0.016), (SZ1, -0.112), (SZ1 - 0.022, -0.134),
          (SZ0 + 0.022, -0.134), (SZ0, -0.112), (SZ0, -0.016), (SZ0 - 0.004, -0.008), (-0.100, -0.004)]
 pan = extrude([(-z, h) for z, h in sprof], XF - XR - 0.03, (EX, YS, 0), (1, 0, 0), tole, bev=0.010, up=(0, 1, 0))
+# cuve en tôle emboutie de 1,5 mm, ouverte en haut
+T_S = 0.0015
+inner = [(SZ1 - T_S, 0.012), (SZ1 - T_S, -0.112), (SZ1 - 0.022, -0.134 + T_S), (SZ0 + 0.022, -0.134 + T_S), (SZ0 + T_S, -0.112), (SZ0 + T_S, 0.012)]
+drill(pan, [extrude([(-z, h) for z, h in inner], XF - XR - 0.03 - 2 * T_S, (EX, YS, 0), (1, 0, 0), None, up=(0, 1, 0))])
 sump.add(pan)
-sump.add(box((XF - XR - 0.03, 0.004, 0.238), (EX, YS - 0.002, 0.019), tole, bev=0.001))   # rebord (arrêté avant les joints de bout de vilebrequin)
+def OPEN():
+    return box((XF - XR - 0.03 - 2 * T_S - 0.004, 0.02, SZ1 - SZ0 - 2 * T_S - 0.004), (EX, YS, (SZ0 + SZ1) / 2), None)
+
+
+
+rebord = box((XF - XR - 0.03, 0.004, 0.238), (EX, YS - 0.002, 0.019), tole, bev=0.001)   # rebord (arrêté avant les joints de bout de vilebrequin)
+drill(rebord, [OPEN()])
+sump.add(rebord)
 for k in range(2):   # bossages d'emboutissage
     for zz in (SZ1 + 0.0005, SZ0 - 0.0005):
         sump.add(box((XF - XR - 0.08, 0.008, 0.006), (EX, YS - 0.05 - k * 0.03, zz), tole, bev=0.003))
-sump.add(box((XF - XR - 0.03, 0.003, 0.240), (EX, YS + 0.0015, 0.019), joint))
+jt = box((XF - XR - 0.03, 0.003, 0.240), (EX, YS + 0.0015, 0.019), joint)
+drill(jt, [OPEN()])
+sump.add(jt)
 fastener(sump, 'bouchon-vidange', (EX - 0.06, YS - 0.134, 0.02), (0, -1, 0), kind='plug', r=0.011, length=0.016, travel=0.08)
 sv = []
 for k in range(7):
     x = XR + 0.015 + k * (XF - XR - 0.03) / 6
-    for zz in (0.130, -0.092):
+    for zz in (0.133, -0.092):
         sv.append(((x, YS - 0.004, zz), (0, -1, 0)))
 fasteners(sump, 'vis-carter-huile', sv, r=0.005, length=0.015, travel=0.03)
 
@@ -458,27 +539,37 @@ fasteners(sump, 'vis-carter-huile', sv, r=0.005, length=0.015, travel=0.03)
 # POMPE À HUILE (planche 10) : dans le carter, entraînée par l'arbre à cames
 # =====================================================================================
 ph = Part('pompe-huile', (0, -0.3, 0.2))
-PX, PZ = EX, CAM_Z + 0.032          # arbre de commande vertical (allumeur au-dessus, pompe en dessous)
-PY = YC - 0.002                            # corps de pompe
-# pignon de commande d'allumeur et de pompe, engrené sur l'arbre à cames (fente : gros déport côté embrayage)
+# MR 175 B-84 : corps vertical en alu boulonné sous le carter-cylindres par 3 vis, au pied de la
+# colonne de l'arbre de commande ; pignons menant et mené, couvercle, clapet de décharge (bille,
+# ressort, bouchon serti), crépine en cloche sous le couvercle. Arbre de commande long, pignon
+# hélicoïdal en haut engrené sur l'arbre à cames (il entraîne aussi l'allumeur par sa fente).
+PX, PZ = EX, CAM_Z + 0.032
+PT = YC - 0.005                    # plan de pose sous le carter-cylindres
+PB = YC - 0.088                    # bas du corps (plan du couvercle)
 ph.add(toothed(13, 0.016, 0.016, (PX, CAM_Y, PZ), (0, 1, 0), acier, hole=0.004, helix=math.radians(-45), depth=0.0018, name='pignon-commande'))
 ph.add(box((0.022, 0.004, 0.003), (PX + 0.002, CAM_Y + 0.0095, PZ), acier_noir))   # fente d'entraînement de l'allumeur
-ph.add(cyl(0.0045, CAM_Y - PY - 0.01, (PX, (CAM_Y + PY) / 2, PZ), (0, 1, 0), acier, 12, name='arbre-commande'))
-ph.add(cyl(0.0065, 0.016, (PX, PY + 0.022, PZ), (0, 1, 0), acier_noir, 6, name='douille'))   # douille d'entraînement (10)
-# corps, pignons menant et mené, couvercle et clapet de décharge (bille, ressort, siège, goupille)
-ph.add(box((0.056, 0.03, 0.044), (PX + 0.012, PY, PZ), alu, bev=0.005))
-ph.add(toothed(8, 0.0105, 0.012, (PX, PY - 0.021, PZ), (0, 1, 0), acier_taille, hole=0.0045, depth=0.0028, name='pignon-menant'))
-ph.add(toothed(8, 0.0105, 0.012, (PX + 0.021, PY - 0.021, PZ), (0, 1, 0), acier_taille, hole=0.004, depth=0.0028, phase=math.pi / 8, name='pignon-mene'))
-ph.add(cyl(0.004, 0.02, (PX + 0.021, PY - 0.018, PZ), (0, 1, 0), acier, 10, name='axe-pignon-fou'))
-ph.add(box((0.056, 0.006, 0.044), (PX + 0.012, PY - 0.031, PZ), alu, bev=0.002))   # couvercle
-ph.add(cyl(0.0045, 0.008, (PX + 0.03, PY - 0.031, PZ - 0.012), (0, 1, 0), acier, 12, name='siege-clapet'))
-ph.add(sphere(0.0038, (PX + 0.03, PY - 0.026, PZ - 0.012), acier_taille, 10, 6))
-ph.add(tube([(PX + 0.03 + 0.0028 * math.cos(2 * math.pi * k / 8), PY - 0.04 - 0.012 * k / 48, PZ - 0.012 + 0.0028 * math.sin(2 * math.pi * k / 8)) for k in range(49)], 0.0005, acier_noir, seg=5, res=1))
-# tuyau d'aspiration et crépine
-ph.add(tube([(PX + 0.012, PY - 0.034, PZ - 0.01), (PX + 0.015, PY - 0.07, PZ - 0.03), (EX - 0.10, YS - 0.10, 0.03)], 0.007, acier_noir, seg=8))
-ph.add(lathe([(0.0, 0.0), (0.032, 0.0), (0.034, 0.006), (0.03, 0.012), (0.008, 0.016), (0.0, 0.016)], (EX - 0.095, YS - 0.118, 0.03), (0, 1, 0), acier_noir, 32, 'crepine'))
-ph.add(lathe([(0.026, -0.0005), (0.033, -0.0005), (0.033, 0.0005), (0.026, 0.0005)], (EX - 0.095, YS - 0.117, 0.03), (0, 1, 0), M('grillage', 0x8a8f93, 0.8, 0.5), 32))
-fasteners(ph, 'vis-pompe-huile', [((PX + 0.012 + dx, PY + 0.015, PZ + dz), (0, 1, 0)) for dx, dz in ((0.022, 0.016), (-0.022, -0.016))], r=0.005, length=0.03, travel=0.04)
+ph.add(cyl(0.0045, CAM_Y - PB - 0.01, (PX, (CAM_Y + PB + 0.01) / 2, PZ), (0, 1, 0), acier, 12, name='arbre-commande'))
+# bride triangulaire à 3 trous et colonne (profil v -> -z : pointe vers le centre du carter)
+ph.add(extrude([(0.0, 0.026), (0.024, -0.014), (-0.024, -0.014)], 0.006, (PX, PT - 0.003, PZ - 0.004), (0, 1, 0), alu, bev=0.003))
+ph.add(cyl(0.012, PT - PB - 0.03, (PX, (PT + PB + 0.03) / 2, PZ), (0, 1, 0), alu, 20, name='colonne'))
+# corps des pignons, décalé vers l'intérieur du carter, et couvercle
+GZ = PZ - 0.0065
+ph.add(box((0.052, 0.030, 0.040), (PX + 0.010, PB + 0.015, GZ), alu, bev=0.003))
+ph.add(toothed(8, 0.0105, 0.012, (PX, PB + 0.012, PZ), (0, 1, 0), acier_taille, hole=0.0045, depth=0.0028, name='pignon-menant'))
+ph.add(toothed(8, 0.0105, 0.012, (PX + 0.021, PB + 0.012, PZ), (0, 1, 0), acier_taille, hole=0.004, depth=0.0028, phase=math.pi / 8, name='pignon-mene'))
+ph.add(cyl(0.004, 0.02, (PX + 0.021, PB + 0.015, PZ), (0, 1, 0), acier, 10, name='axe-pignon-fou'))
+ph.add(box((0.052, 0.005, 0.040), (PX + 0.010, PB - 0.0025, GZ), alu, bev=0.002))   # couvercle
+# clapet de décharge : alésage latéral, bille, ressort, bouchon
+ph.add(cyl(0.007, 0.022, (PX + 0.042, PB + 0.012, GZ), (1, 0, 0), alu, 14, name='logement-clapet'))
+ph.add(sphere(0.0038, (PX + 0.034, PB + 0.012, GZ), acier_taille, 10, 6))
+ph.add(tube([(PX + 0.037 + 0.012 * k / 48, PB + 0.012 + 0.0028 * math.cos(2 * math.pi * k / 8), GZ + 0.0028 * math.sin(2 * math.pi * k / 8)) for k in range(49)], 0.0005, acier_noir, seg=5, res=1))
+ph.add(cyl(0.0075, 0.004, (PX + 0.054, PB + 0.012, GZ), (1, 0, 0), acier, 14, name='bouchon-clapet'))
+# crépine en cloche sous le couvercle (grillage dans une coupelle emboutie)
+CR = (PX - 0.004, YS - 0.118, PZ - 0.040)
+ph.add(tube([(PX + 0.002, PB - 0.005, GZ - 0.006), (PX, PB - 0.016, GZ - 0.014), (CR[0], CR[1] + 0.016, CR[2])], 0.007, acier_noir, seg=10))
+ph.add(lathe([(0.0, 0.0), (0.032, 0.0), (0.034, 0.006), (0.034, 0.012), (0.012, 0.016), (0.0, 0.016)], CR, (0, 1, 0), acier_noir, 32, 'crepine'))
+ph.add(lathe([(0.026, -0.0005), (0.033, -0.0005), (0.033, 0.0005), (0.026, 0.0005)], (CR[0], CR[1] + 0.001, CR[2]), (0, 1, 0), M('grillage', 0x8a8f93, 0.8, 0.5), 32))
+fasteners(ph, 'vis-pompe-huile', [((PX + dx, PT - 0.006, PZ - 0.004 + dz), (0, -1, 0)) for dx, dz in ((0.0, -0.020), (0.018, 0.010), (-0.018, 0.010))], r=0.005, length=0.03, travel=0.04)
 
 # =====================================================================================
 # DISTRIBUTION (planche 8) : pignons, chaîne simple, tendeur, carter nervuré en tôle
@@ -540,15 +631,38 @@ fasteners(dist, 'vis-carter-distribution', dv, r=0.005, length=0.015, travel=0.0
 # POMPE À EAU (planche 11) sur la culasse côté volant, poulie et thermostat
 # =====================================================================================
 wp = Part('pompe-eau', (0.25, 0.4, 0))
-WX, WY, WZ = XF + 0.03, YD + 0.03, 0.02
-wp.add(box((0.04, 0.09, 0.12), (WX, WY, WZ), alu, bev=0.012))
-wp.add(cyl(0.032, 0.04, (WX + 0.035, WY, WZ), (1, 0, 0), alu, 28))
-wp.add(cyl(0.015, 0.03, (WX + 0.06, WY, WZ), (1, 0, 0), alu, 20))
-wp.add(lathe([(0.012, -0.009), (0.06, -0.009), (0.06, -0.006), (0.054, 0.0), (0.06, 0.006), (0.06, 0.009), (0.012, 0.009)], (XF + 0.07, WY, WZ), (1, 0, 0), acier_noir, 40))
-wp.add(cyl(0.02, 0.04, (WX, WY + 0.045, WZ - 0.04), (0, 1, 0), alu, 24))   # boîtier de thermostat
-wp.add(cyl(0.017, 0.04, (WX + 0.03, WY + 0.06, WZ - 0.04), (1, 0.4, 0), alu, 20))
-fasteners(wp, 'vis-pompe-eau', [((WX + 0.021, WY + dy, WZ + dz), (1, 0, 0)) for dy, dz in ((0.035, 0.05), (-0.035, 0.05), (0.035, -0.05), (-0.035, -0.05), (0.0, 0.055))], r=0.006, length=0.04, travel=0.06)
-fasteners(wp, 'vis-poulie-pompe', [((XF + 0.08, WY + 0.022 * math.cos(a), WZ + 0.022 * math.sin(a)), (1, 0, 0)) for a in (0, 2.094, 4.189)], r=0.005, length=0.02, travel=0.04)
+# MR 175 B-86 : corps rond en alu plaqué sur le bout de la culasse (joints montés à sec), roulement
+# dans un nez, moyeu à 4 trous où se fixe la poulie, écrou central serré à 4,5 m.daN (poulie montée
+# sans clavette, 2 gouttes de Loctite frein filet fort) ; tubulure de sortie verticale (thermostat,
+# durite supérieure) et tubulures d'entrée (durite inférieure du radiateur, retour de chauffage).
+WX, WY, WZ = XF + 0.03, YD + 0.0375, 0.02   # centré sur la face de la culasse (72 mm de haut)
+wp.add(lathe([(0.0, 0.0), (0.036, 0.0), (0.036, 0.007), (0.045, 0.012), (0.045, 0.030), (0.034, 0.036), (0.024, 0.038),
+              (0.024, 0.056), (0.0, 0.056)], (XF, WY, WZ), (1, 0, 0), alu, 40, 'corps-pompe'))
+for k in range(6):   # nervures de la volute
+    a_ = 2 * math.pi * k / 6 + 0.3
+    wp.add(box((0.026, 0.004, 0.012), (XF + 0.022, WY + 0.047 * math.cos(a_), WZ + 0.047 * math.sin(a_)), alu, bev=0.001))
+wp.add(lathe([(0.008, 0.0), (0.030, 0.0), (0.030, 0.004), (0.012, 0.004), (0.012, 0.010), (0.008, 0.010)], (XF + 0.056, WY, WZ), (1, 0, 0), acier, 32, 'moyeu'))
+for k in range(4):   # 4 trous du moyeu
+    a_ = math.pi / 4 + k * math.pi / 2
+    wp.add(cyl(0.0035, 0.0045, (XF + 0.058, WY + 0.021 * math.cos(a_), WZ + 0.021 * math.sin(a_)), (1, 0, 0), acier_noir, 10))
+wp.add(lathe([(0.012, -0.009), (0.06, -0.009), (0.06, -0.006), (0.054, 0.0), (0.06, 0.006), (0.06, 0.009), (0.012, 0.009)], (XF + 0.07, WY, WZ), (1, 0, 0), acier_noir, 40, 'poulie'))
+# pattes de fixation autour de la bride
+WP_EARS = [(0.027, 0.044), (-0.026, 0.044), (0.027, -0.034), (-0.026, -0.034), (0.0, 0.052)]
+for dy, dz in WP_EARS:
+    wp.add(cyl(0.0075, 0.009, (XF + 0.0045, WY + dy, WZ + dz), (1, 0, 0), alu, 16))
+# tubulure de sortie verticale : siège du thermostat (equipements.py) et coude vers la durite supérieure
+WY0 = YD + 0.03   # repère des tubulures (raccords des durites et thermostat, equipements.py)
+TH = (XF + 0.03, WZ - 0.04)
+wp.add(cyl(0.020, 0.036, (TH[0], WY0 + 0.035, TH[1]), (0, 1, 0), alu, 24, name='colonne-sortie'))
+wp.add(cyl(0.024, 0.006, (TH[0], WY0 + 0.050, TH[1]), (0, 1, 0), alu, 28, name='siege-thermostat'))
+wp.add(box((0.014, 0.006, 0.070), (TH[0], WY0 + 0.050, TH[1]), alu, bev=0.003))   # pattes des 2 vis du couvercle de thermostat
+wp.add(tube([(TH[0], WY0 + 0.055, TH[1]), (TH[0], WY0 + 0.074, TH[1]), (TH[0] + 0.012, WY0 + 0.078, TH[1]), (XF + 0.057, WY0 + 0.078, TH[1])], 0.018, alu, seg=20, res=6))   # s'arrête avant le plan de la courroie
+wp.add(torus(0.0185, 0.0018, (XF + 0.053, WY0 + 0.078, TH[1]), (1, 0, 0), alu, 24, 6))   # bourrelet de durite
+# tubulures d'entrée : durite inférieure (radiateur) et retour de chauffage
+wp.add(tube([(XF + 0.030, WY0 - 0.018, WZ + 0.030), (XF + 0.035, WY0 - 0.030, WZ + 0.060), (XF + 0.035, WY0 - 0.030, WZ + 0.078)], 0.017, alu, seg=18, res=4))   # vers +z : la durite contourne la poulie
+wp.add(tube([(XF + 0.012, WY0 - 0.030, WZ + 0.030), (XF + 0.014, WY0 - 0.038, WZ + 0.050)], 0.010, alu, seg=14, res=3))
+fasteners(wp, 'vis-pompe-eau', [((XF + 0.010, WY + dy, WZ + dz), (1, 0, 0)) for dy, dz in WP_EARS], r=0.006, length=0.02, travel=0.06)
+fastener(wp, 'vis-poulie-pompe', (XF + 0.083, WY, WZ), (1, 0, 0), kind='nut', r=0.009, length=0.012, travel=0.04)
 
 # =====================================================================================
 # COLLECTEUR ADMISSION-ÉCHAPPEMENT (planche 9), côté gauche

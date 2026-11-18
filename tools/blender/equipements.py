@@ -29,7 +29,7 @@ XF = EX + 0.185
 TABLIER_X = 0.700
 PUL_X = XF + 0.07                    # plan des poulies (côté embrayage)
 CAM = (0.516, 0.077, 0.050)          # poulie d'arbre à cames (y, z, r) — voir moteur.py
-WP = (0.618, 0.020, 0.060)           # poulie de pompe à eau
+WP = (0.6255, 0.020, 0.060)           # poulie de pompe à eau
 ALT = (0.665, 0.225, 0.036)          # poulie d'alternateur
 
 alu = M('alu-coule', 0xb9bcba, 0.55, 0.5)
@@ -166,19 +166,19 @@ for s in (1, -1):
     th.add(tube([(TX + s * 0.016, TY + 0.010, TZ), (TX + s * 0.012, TY - 0.012, TZ), (TX, TY - 0.016, TZ)], 0.0015, laiton, 'etrier', seg=6))
 pts = [(TX + 0.011 * math.cos(2 * math.pi * 3.5 * i / 30), TY + 0.004 - 0.014 * i / 30, TZ + 0.011 * math.sin(2 * math.pi * 3.5 * i / 30)) for i in range(31)]
 th.add(tube(pts, 0.0011, M('ressort', 0x6d7d8a, 0.8, 0.35), 'ressort', seg=4, res=2))
-fasteners(th, 'vis-boitier-thermostat', [((TX + s * 0.024, TY + 0.03, TZ), (0, 1, 0)) for s in (1, -1)], kind='bolt', r=0.004, length=0.025, travel=0.04)
+fasteners(th, 'vis-boitier-thermostat', [((TX, TY + 0.006, TZ + s * 0.028), (0, 1, 0)) for s in (1, -1)], kind='bolt', r=0.004, length=0.02, travel=0.04)   # pattes du siège (moteur.py)
 
 dur = Part('durites', (0.15, 0.3, 0))
-up = [(1.175, 0.690, -0.02), (1.30, 0.75, -0.10), (1.50, 0.76, -0.20), (RX - 0.065, RY + 0.10, ZL - 0.018)]
-lo = [(RX - 0.065, RY - 0.10, ZR + 0.018), (1.50, 0.53, 0.20), (1.25, 0.60, 0.14), (1.16, 0.60, 0.07)]
+up = [(1.16, 0.696, -0.02), (1.19, 0.725, -0.04), (1.30, 0.765, -0.10), (1.50, 0.76, -0.20), (RX - 0.065, RY + 0.10, ZL - 0.018)]
+lo = [(RX - 0.065, RY - 0.10, ZR + 0.018), (1.50, 0.53, 0.20), (1.25, 0.59, 0.155), (1.19, 0.588, 0.14), (1.14, 0.588, 0.095)]
 dur.add(tube(up, 0.019, caoutchouc, 'durite-superieure', seg=14, res=10))     # thermostat → radiateur
 dur.add(tube(lo, 0.019, caoutchouc, 'durite-inferieure', seg=14, res=10))     # radiateur → pompe
 dur.add(tube([(0.76, 0.64, -0.06), (0.73, 0.72, -0.20), (TABLIER_X + 0.005, 0.79, -0.30)], 0.010, caoutchouc, 'durite-chauffage-aller', seg=10))
-dur.add(tube([(1.12, 0.58, 0.07), (1.08, 0.57, 0.16), (1.0, 0.585, 0.215), (0.95, 0.625, 0.21), (0.76, 0.74, 0.30), (TABLIER_X + 0.005, 0.79, 0.28)], 0.010, caoutchouc, 'durite-chauffage-retour', seg=10, res=10))
+dur.add(tube([(1.12, 0.58, 0.07), (1.08, 0.55, 0.14), (1.0, 0.555, 0.21), (0.95, 0.62, 0.21), (0.76, 0.74, 0.30), (TABLIER_X + 0.005, 0.79, 0.28)], 0.010, caoutchouc, 'durite-chauffage-retour', seg=10, res=10))
 dur.add(tube([(VX + 0.06, VY - 0.07, VZ), (1.20, 0.72, 0.35), (1.55, 0.82, 0.10), (RX - 0.03, RY + CH / 2 + 0.008, ZL - 0.018)], 0.005, caoutchouc, 'tuyau-vase', seg=8, res=10))
 cl = []
-for p, ax in ((up[0], (1, 0.4, 0)), (up[-1], (1, 0, 0)), (lo[0], (1, 0, 0)), (lo[-1], (1, 0, 0)),
-              ((0.76, 0.645, -0.065), (0.3, 1, -0.6)), ((TABLIER_X + 0.012, 0.79, -0.30), (1, 0, 0)), ((TABLIER_X + 0.012, 0.79, 0.28), (1, 0, 0)), ((1.155, 0.60, 0.072), (1, 0, 0))):
+for p, ax in ((up[0], (1, 0, 0)), (up[-1], (1, 0, 0)), (lo[0], (1, 0, 0)), (lo[-1], (1, 0, 0)),
+              ((0.76, 0.645, -0.065), (0.3, 1, -0.6)), ((TABLIER_X + 0.012, 0.79, -0.30), (1, 0, 0)), ((TABLIER_X + 0.012, 0.79, 0.28), (1, 0, 0)), ((1.14, 0.588, 0.105), (0, 0, 1))):
     r = 0.019 if p in (up[0], up[-1], lo[0], lo[-1]) else 0.010
     dur.add(torus(r + 0.002, 0.0022, p, ax, zinc, 24, 6, 'collier'))
     cl.append(((p[0], p[1] + r + 0.004, p[2]), (0, 1, 0)))
