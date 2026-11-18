@@ -2,19 +2,23 @@
 # pare-chocs, calandre, projecteurs, feux, essuie-glace.
 # Lancer : python3 tools/blender/caisse.py   →   models/caisse.glb
 #
-# Cotes de la RTA : longueur hors tout 3 668 mm, largeur 1 509 mm, hauteur à vide 1 550 mm,
-# porte-à-faux avant 528 mm, arrière 691 (droit) / 739 mm (gauche), empattement 2 449 / 2 401 mm
-# (« Dimensions et poids », p.79). Silhouette relevée sur la photo de profil de la GTL (p. I) et sur
-# les plans cotés des versions break et pick-up, dont l'avant est identique (p. XVIII et XIX) :
-# ligne de ceinture 1 040 mm, haut des ailes 1 045 → 855 mm, passages de roue AV Ø 700 mm,
-# hayon incliné, projecteurs Ø 168 mm à 670 mm du sol, pare-chocs entre 350 et 450 mm.
-# Ce que la RTA ne cote pas (rayons, galbes, épaisseurs) est estimé d'après ces vues.
+# Référence : MR 175 page A-2 « Caractéristiques — Berline » (cotes et vues de profil, de face et
+# arrière, voir cotes.py) : longueur 3 668 mm, largeur hors tout 1 485 mm, hauteur à vide 1 550 mm,
+# empattement 2 449 / 2 401 mm. Les vues A-2, recalées à l'échelle, donnent la silhouette : flancs
+# bombés et pavillon rentré, ceinture à 990 mm, vitres de 1 010 à 1 400 mm, capot de 1 010 mm au
+# pied de pare-brise à 850 mm à l'avant, passage de roue AV haut de 690 mm, AR de 595 mm, face
+# arrière inclinée, hayon de 0,94 m de large en bas. Le MR 176 (carrosserie) n'étant pas
+# disponible, la face avant GTL (calandre plastique, projecteurs Ø 168 mm à 670 mm du sol,
+# pare-chocs gris à butoirs) reste tirée des dessins de la RTA (p. 3 et XVIII).
+# Ce que les manuels ne cotent pas (rayons, galbes, épaisseurs) est estimé d'après ces vues.
 import math
 import os
 import sys
 import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from cotes import (BELT, CROWN, R_SH, ROOF_HW, SILL_IN, W, Y_BOT, Y_ROOF, smooth_interp, x_rear, x_ws,  # noqa: E402
+                   z_glass, zside)
 from lib import (M, M_img, Part, T, box, quad, copy, cut, cyl, export, extrude, fastener, fasteners, grid, lathe,  # noqa: E402
                  apply_all, delete, mirror_z, orient, outline_round, prism, reset, solidify, torus, tube)
 
@@ -80,71 +84,12 @@ def interp(pts, x):
     return pts[-1][1]
 
 
-def smooth_interp(pts, x):
-    """Catmull-Rom sur une liste [(x, y)] triée (courbes plus douces que interp)."""
-    n = len(pts)
-    if x <= pts[0][0]:
-        return pts[0][1]
-    if x >= pts[-1][0]:
-        return pts[-1][1]
-    for k in range(n - 1):
-        if pts[k][0] <= x <= pts[k + 1][0]:
-            break
-    p0, p1, p2, p3 = pts[max(k - 1, 0)], pts[k], pts[k + 1], pts[min(k + 2, n - 1)]
-    t = (x - p1[0]) / (p2[0] - p1[0])
-    m1 = (p2[1] - p0[1]) / (p2[0] - p0[0]) * (p2[0] - p1[0])
-    m2 = (p3[1] - p1[1]) / (p3[0] - p1[0]) * (p2[0] - p1[0])
-    t2, t3 = t * t, t * t * t
-    return (2 * t3 - 3 * t2 + 1) * p1[1] + (t3 - 2 * t2 + t) * m1 + (-2 * t3 + 3 * t2) * p2[1] + (t3 - t2) * m2
-
-
 X_NOSE = 1.762       # face avant (porte-à-faux 528 mm au pare-chocs : 1,834)
-BELT = 1.040         # ligne de ceinture
-R_SH = 0.022         # rayon de l'épaulement de ceinture
-SILL_IN = 0.030      # retrait de la ceinture vers le vitrage
-Y_BOT = 0.385        # bas de caisse (dessous des portes)
-Y_ROOF = 1.500       # arête du pavillon (gouttières)
-CROWN = 0.048        # bombé du pavillon (sommet 1 548 mm)
 
-FENDER_TOP = [(0.60, 1.046), (1.00, 0.985), (1.42, 0.935), (1.62, 0.897), (1.72, 0.858), (1.80, 0.84)]
-REAR = [(0.30, -1.772), (0.49, -1.755), (0.65, -1.722), (0.833, -1.668), (1.056, -1.585), (1.32, -1.470), (1.50, -1.372)]
-
-
-def W(x):
-    """Demi-largeur en plan (1 509 mm hors tout)."""
-    w = 0.7545
-    if x > 1.45:
-        w -= 0.036 * ((x - 1.45) / 0.31) ** 2
-    if x < -1.50:
-        w -= 0.028 * ((-1.50 - x) / 0.27) ** 2
-    return w
-
-
-def zside(x, y):
-    """Flanc sous la ceinture : léger galbe vertical, bas de caisse roulé vers l'intérieur."""
-    z = W(x) * (1 - 0.012 * ((y - 0.74) / 0.30) ** 2)
-    if y < 0.45:
-        z -= 0.020 * ((0.45 - y) / 0.065) ** 2
-    return z
-
-
-def x_rear(y):
-    return smooth_interp(REAR, y)
-
-
-def x_ws(y):
-    """Arête avant du vitrage (montant de pare-brise), incliné de 33°."""
-    return 0.648 - (y - 1.03) * 0.66
-
-
+# haut des ailes / bord du capot (profil MR 175 A-2)
+FENDER_TOP = [(0.60, 1.012), (0.96, 0.966), (1.31, 0.932), (1.56, 0.905), (1.66, 0.876), (1.72, 0.845), (1.80, 0.83)]
 def fender_top(x):
     return smooth_interp(FENDER_TOP, x)
-
-
-def z_glass(y):
-    """Flanc du pavillon (vitres) : rentré de 30 mm à la ceinture, 665 mm sous le pavillon."""
-    z0 = zside(0, BELT - R_SH) - SILL_IN
-    return z0 + (0.665 - z0) * (y - BELT) / (Y_ROOF - BELT)
 
 
 def lin(a, b, n):
@@ -180,7 +125,8 @@ RC_REAR = 0.11
 
 def lower_rows():
     """Rangées du flanc bas : du bas de caisse à l'épaulement de ceinture."""
-    rows = [(y, 0.0) for y in lin(Y_BOT, BELT - R_SH, 34)]
+    ys = sorted(set([round(y, 5) for y in lin(Y_BOT, BELT - R_SH, 40)] + [round(y, 5) for y in lin(0.735, 0.825, 31)]))
+    rows = [(y, 0.0) for y in ys]
     for k in range(1, 7):
         th = k / 6 * math.pi / 2
         rows.append((BELT - R_SH + R_SH * math.sin(th), R_SH * (1 - math.cos(th))))
@@ -212,13 +158,13 @@ def build_roof(edge):
     xf, xr = edge[0][0][0], edge[-1][0][0]
     cx = (xf + xr) / 2
     P = []
-    for s in lin(1.0, 0.0, 16):
+    for s in lin(1.0, 0.0, 22):
         row = []
         for x, z in full:
             px, pz = cx + (x - cx) * s, z * s
-            ends = min((xf - px) / 0.18, (px - xr) / 0.22, 1.0)
+            ends = min((xf - px) / 0.24, (px - xr) / 0.30, 1.0)
             ends = max(ends, 0.0)
-            y = Y_ROOF + CROWN * (1 - (pz / 0.665) ** 2) * (3 * ends ** 2 - 2 * ends ** 3) + 0.004 * (1 - s)
+            y = Y_ROOF + CROWN * (1 - (pz / ROOF_HW) ** 2) * (3 * ends ** 2 - 2 * ends ** 3) + 0.004 * (1 - s)
             row.append((px, y, pz))
         P.append(row)
     return grid(P, peinture, 'pavillon', close_j=True)
@@ -290,7 +236,7 @@ R_FS = 0.030
 
 def HW(x):
     """Demi-largeur du capot."""
-    return W(x) - 0.150
+    return W(x) - 0.2025
 
 
 def fender_half():
@@ -307,7 +253,7 @@ def fender_half():
         xb = x0 if a is None else cx + RCF * math.cos(a)
         yt = fender_top(xb)
         yb = 0.40 + 0.07 * max(0.0, (xb - 1.50) / 0.26) ** 1.5
-        for y in lin(yb, yt - R_FS, 26):
+        for y in lin(yb, yt - R_FS, 64):
             if a is None:
                 col.append((x0, y, zside(x0, y)))
             else:
@@ -320,10 +266,15 @@ def fender_half():
             d = R_FS * (1 - math.cos(th))
             col.append((bx - nx * d, yt - R_FS + R_FS * math.sin(th), bz - nz * d))
         tx, ty, tz = col[-1]
-        flat = (bz - R_FS - HW(xb) - GAP) * lscale if a is None else (zside(cx, yt) - R_FS - HW(xb) - GAP) * lscale
-        for k in range(1, 6):
-            d = flat * k / 5
-            col.append((tx - nx * d, ty, tz - nz * d))
+        if a is None:
+            flat = bz - R_FS - HW(xb) - GAP
+            for k in range(1, 6):
+                d = flat * k / 5
+                col.append((tx - nx * d, ty, tz - nz * d))
+        else:   # dans l'arrondi avant, le rebord plat va droit jusqu'au bord du capot (pas de jour au coin)
+            flat = max(tz - HW(min(tx, X_NOSE - 0.02)) - GAP, 0.0)
+            for k in range(1, 6):
+                col.append((tx, ty, tz - flat * k / 5))
         P.append(col)
     return P
 
@@ -340,7 +291,7 @@ fender.name = 'ailes'
 solidify(fender, SKIN)
 
 # séparation aile / pied avant : ligne oblique du haut de l'aile au passage de roue (photo p. I)
-SLANT = [(0.62, 1.046), (1.085, 0.38)]
+SLANT = [(0.62, 1.012), (1.085, 0.38)]
 
 
 def slant_outline(off, front=True):
@@ -354,8 +305,8 @@ cut(lower, prism(slant_outline(-GAP / 2), 'z', -1.0, 1.0))
 cut(fender, prism(slant_outline(GAP / 2, False), 'z', -1.0, 1.0))
 
 # passages de roue (avant Ø 700 mm au sommet, arrière plus bas et plus large)
-ARCH_F = (1.31, 0.35, 0.350)
-ARCH_R = (-1.125, 0.27, 0.370)
+ARCH_F = (1.31, 0.36, 0.330)
+ARCH_R = (-1.115, 0.25, 0.345)
 
 
 def arch_cut(o, a, grow=0.0):
@@ -372,19 +323,20 @@ for s in (1, -1):
     cut(lower, prism([(-1.40, 0.30), (-1.40, 0.445), (-2.0, 0.445), (-2.0, 0.30)], 'z', *((0.625, 1.0) if s > 0 else (-1.0, -0.625))))
 
 # ---------------------------------------------------------------- portes
-FD_FRONT = [(0.700, 0.79), (0.692, 0.86), (0.668, 0.935), (0.640, 0.995), (0.615, 1.045)]
+FD_FRONT = [(0.700, 0.79), (0.690, 0.86), (0.664, 0.925), (0.624, 0.975)]
+D_TOP = 1.420        # haut des portes
 
 
 def front_door_outline():
     pts = [(0.700, 0.30)] + FD_FRONT
-    for y in lin(1.06, 1.470, 6):
+    for y in lin(1.00, D_TOP, 6):
         pts.append((x_ws(y) - 0.072, y))
-    pts += [(-0.205, 1.470), (-0.205, 0.30)]
+    pts += [(-0.205, D_TOP), (-0.205, 0.30)]
     return pts
 
 
 def rear_door_outline():
-    return [(-0.225, 0.30), (-0.225, 1.470), (-0.886, 1.470), (-0.832, 1.040), (-0.800, 0.30)]
+    return [(-0.225, 0.30), (-0.225, D_TOP), (-0.880, D_TOP), (-0.835, BELT), (-0.800, 0.30)]
 
 
 def offset_outline(pts, d):
@@ -426,9 +378,10 @@ for name in ('portes-ard', 'portes-arg'):
         arch_cut(d, ARCH_R, GAP)
 
 # vitres des portes (coulissantes) et vitres de custode
-FD_WIN = outline_round([(x_ws(1.075) - 0.105, 1.075), (-0.178, 1.075), (-0.178, 1.445), (x_ws(1.445) - 0.105, 1.445)], 0.035)
-RD_WIN = outline_round([(-0.252, 1.075), (-0.818, 1.075), (-0.858, 1.445), (-0.252, 1.445)], 0.035)
-Q_WIN = outline_round([(-0.928, 1.080), (-1.335, 1.080), (-1.272, 1.440), (-0.946, 1.440)], [0.035, 0.05, 0.06, 0.035])
+W_BOT, W_TOP = 1.012, 1.395   # bas et haut des vitres (MR 175 A-2)
+FD_WIN = outline_round([(x_ws(W_BOT) - 0.105, W_BOT), (-0.178, W_BOT), (-0.178, W_TOP), (x_ws(W_TOP) - 0.105, W_TOP)], 0.035)
+RD_WIN = outline_round([(-0.252, W_BOT), (-0.818, W_BOT), (-0.852, W_TOP), (-0.252, W_TOP)], 0.035)
+Q_WIN = outline_round([(-0.925, W_BOT + 0.006), (-1.310, W_BOT + 0.006), (-1.250, W_TOP - 0.006), (-0.940, W_TOP - 0.006)], [0.035, 0.05, 0.06, 0.035])
 for name, _, s in DOORS:
     win = FD_WIN if 'av' in name else RD_WIN
     zr = (0.5, 1.0) if s > 0 else (-1.0, -0.5)
@@ -437,39 +390,48 @@ for s in (1, -1):
     cut(upper, prism(Q_WIN, 'z', *((0.5, 1.0) if s > 0 else (-1.0, -0.5))))
 
 # pare-brise (plan incliné entre les montants)
-WS_OUT = outline_round([(-0.612, 1.065), (0.612, 1.065), (0.585, 1.468), (-0.585, 1.468)], 0.05)
+WS_OUT = outline_round([(-0.545, 1.025), (0.545, 1.025), (0.495, 1.418), (-0.495, 1.418)], 0.05)
 cut(upper, prism(WS_OUT, 'x', 0.20, 0.95))
 
 # hayon : découpé dans la face arrière
-HATCH = outline_round([(-0.598, 0.455), (0.598, 0.455), (0.590, 1.04), (0.540, 1.478), (-0.540, 1.478), (-0.590, 1.04)], [0.05, 0.05, 0.0, 0.10, 0.10, 0.0])
+HATCH = outline_round([(-0.470, 0.455), (0.470, 0.455), (0.470, BELT), (0.430, 1.425), (-0.430, 1.425), (-0.470, BELT)], [0.05, 0.05, 0.0, 0.10, 0.10, 0.0])
 hatch_skins = []
 for src in (lower, upper):
     h = copy(src, 'hayon')
     cut(h, prism(offset_outline(HATCH, -GAP / 2), 'x', -2.1, -1.25), 'INTERSECT')
     hatch_skins.append(h)
     cut(src, prism(offset_outline(HATCH, GAP / 2), 'x', -2.1, -1.25))
-HATCH_WIN = outline_round([(-0.535, 1.085), (0.535, 1.085), (0.492, 1.432), (-0.492, 1.432)], 0.06)
+HATCH_WIN = outline_round([(-0.385, 1.035), (0.385, 1.035), (0.360, 1.345), (-0.360, 1.345)], 0.06)
 cut(hatch_skins[1], prism(HATCH_WIN, 'x', -2.1, -1.25))
 cut(hatch_skins[0], prism(HATCH_WIN, 'x', -2.1, -1.25))
 
 
 # ---------------------------------------------------------------- capot (articulé à l'avant)
+def hood_bulge(x, v):
+    """Bossage central du capot (vues de face MR 175 A-2 et RTA p. 3) : plateau surélevé de 14 mm,
+    600 mm de large au pare-brise, 460 mm à l'avant, raccordé aux côtés sur 60 mm."""
+    wc = 0.30 - 0.07 * min(max((x - 0.67) / 1.0, 0.0), 1.0)
+    t = min(max((wc + 0.03 - abs(v) * HW(x)) / 0.06, 0.0), 1.0)
+    return 0.014 * t * t * (3 - 2 * t)
+
+
 def hood_points():
     xs = lin(0.672, 1.680, 56)
     cols = []
-    for v in lin(-1.0, 1.0, 31):
+    for v in lin(-1.0, 1.0, 61):
         col = []
         for x in xs:
-            y = fender_top(x) + 0.003 + 0.034 * (1 - v * v)
+            y = fender_top(x) + 0.003 + 0.034 * (1 - v * v) + hood_bulge(x, v)
             col.append((x, y, v * HW(x)))
         x1, y1 = xs[-1], col[-1][1]
+        # (le bossage central se prolonge dans le retour avant)
         ylow = 0.818 + 0.032 * v * v
         p0, p1, p2, p3 = (x1, y1), (1.735, y1), (X_NOSE - 0.003, y1 - 0.025), (X_NOSE - 0.003, ylow)
         for k in range(1, 15):
             t = k / 14
             bx = (1 - t) ** 3 * p0[0] + 3 * (1 - t) ** 2 * t * p1[0] + 3 * (1 - t) * t * t * p2[0] + t ** 3 * p3[0]
             by = (1 - t) ** 3 * p0[1] + 3 * (1 - t) ** 2 * t * p1[1] + 3 * (1 - t) * t * t * p2[1] + t ** 3 * p3[1]
-            col.append((bx, by, v * HW(min(bx, X_NOSE - 0.02))))
+            col.append((bx, by + hood_bulge(xs[-1], v) * (1 - t), v * HW(min(bx, X_NOSE - 0.02))))
         cols.append(col)
     return cols
 
@@ -478,9 +440,9 @@ hood = orient(grid(hood_points(), peinture, 'capot'), inside=(1.2, 0.6, 0.0))
 solidify(hood, SKIN * 1.5)
 hood_frame = []
 for s in (1, -1):   # renforts sous le capot et charnières avant
-    hood_frame.append(tube([(0.70, fender_top(0.70) - 0.004, s * 0.52), (1.20, fender_top(1.2) - 0.004, s * 0.55), (1.66, fender_top(1.66) - 0.004, s * 0.52)], 0.009, interieur, 'renfort'))
-    hood_frame.append(box((0.04, 0.025, 0.03), (1.725, 0.83, s * 0.45), acier_noir, 0.004, 'charniere'))
-    hood_frame.append(cyl(0.007, 0.05, (1.735, 0.82, s * 0.45), (0, 0, 1), acier, 12, name='axe'))
+    hood_frame.append(tube([(0.70, fender_top(0.70) - 0.004, s * 0.46), (1.20, fender_top(1.2) - 0.004, s * 0.48), (1.66, fender_top(1.66) - 0.004, s * 0.45)], 0.009, interieur, 'renfort'))
+    hood_frame.append(box((0.04, 0.025, 0.03), (1.725, 0.81, s * 0.40), acier_noir, 0.004, 'charniere'))
+    hood_frame.append(cyl(0.007, 0.05, (1.735, 0.80, s * 0.40), (0, 0, 1), acier, 12, name='axe'))
 # gouttières d'aile sous le joint capot / aile : on ne voit plus le moteur à travers le jeu
 hood_gutter = []
 for s in (1, -1):
@@ -494,30 +456,31 @@ hood_frame.append(box((0.03, 0.02, 0.05), (0.69, fender_top(0.69) - 0.005, 0), a
 # ---------------------------------------------------------------- face avant, auvent, tablier, ailes intérieures
 TABLIER_X = 0.700
 front_bits = []
-fp = box((0.003, 0.40, 1.28), (X_NOSE - 0.008, 0.625, 0), peinture, 0, 'face-avant')
+fp = box((0.003, 0.425, 1.25), (X_NOSE - 0.008, 0.6375, 0), peinture, 0, 'face-avant')
 for s in (1, -1):
     cut(fp, cyl(0.078, 0.2, (X_NOSE, 0.671, s * 0.417), (1, 0, 0), None, 40, name='trou-phare'))
 cut(fp, prism(outline_round([(-0.30, 0.60), (0.30, 0.60), (0.30, 0.75), (-0.30, 0.75)], 0.01), 'x', X_NOSE - 0.1, X_NOSE + 0.1))
 front_bits.append(fp)
-front_bits.append(box((0.05, 0.003, 1.26), (X_NOSE - 0.03, 0.826, 0), peinture, 0, 'traverse-sup'))
-front_bits.append(box((0.04, 0.04, 1.20), (X_NOSE - 0.025, 0.44, 0), peinture, 0.008, 'traverse-inf'))
+front_bits.append(box((0.05, 0.003, 1.22), (X_NOSE - 0.03, 0.816, 0), peinture, 0, 'traverse-sup'))
+front_bits.append(box((0.04, 0.04, 1.16), (X_NOSE - 0.025, 0.44, 0), peinture, 0.008, 'traverse-inf'))
 # auvent avec grille d'entrée d'air
-front_bits.append(box((0.046, 0.010, 1.40), (0.650, 1.034, 0), peinture, 0.003, 'auvent'))
-front_bits.append(box((0.030, 0.006, 0.64), (0.652, 1.040, 0), plastique_noir, 0.002, 'grille-auvent'))
+Y_AUV = fender_top(0.65) + 0.006
+front_bits.append(box((0.046, 0.010, 2 * (HW(0.65) + 0.04)), (0.650, Y_AUV, 0), peinture, 0.003, 'auvent'))
+front_bits.append(box((0.030, 0.006, 0.64), (0.652, Y_AUV + 0.006, 0), plastique_noir, 0.002, 'grille-auvent'))
 for k in range(11):
-    front_bits.append(box((0.026, 0.004, 0.006), (0.652, 1.043, -0.30 + k * 0.06), peinture, 0, 'lame'))
+    front_bits.append(box((0.026, 0.004, 0.006), (0.652, Y_AUV + 0.009, -0.30 + k * 0.06), peinture, 0, 'lame'))
 # tablier (cloison moteur / habitacle), incliné vers l'auvent
-tab = extrude([(TABLIER_X, 0.38), (TABLIER_X, 0.86), (0.655, 1.028), (0.640, 1.028), (TABLIER_X - 0.006, 0.86), (TABLIER_X - 0.006, 0.38)], 1.12, (0, 0, 0), (0, 0, 1), peinture, 'tablier', up=(0, 1, 0))
+tab = extrude([(TABLIER_X, 0.38), (TABLIER_X, 0.86), (0.655, Y_AUV - 0.006), (0.640, Y_AUV - 0.006), (TABLIER_X - 0.006, 0.86), (TABLIER_X - 0.006, 0.38)], 1.12, (0, 0, 0), (0, 0, 1), peinture, 'tablier', up=(0, 1, 0))
 front_bits.append(tab)
 # insonorisant côté habitacle (feutre noir, sombre sur la photo du poste de conduite p. XVIII)
 front_bits.append(box((0.012, 0.44, 1.08), (TABLIER_X - 0.013, 0.615, 0), M('feutre', 0x1c1b1a, 0.0, 1.0), 0.004, 'insonorisant'))
 # ailes intérieures et passages de roue
 for s in (1, -1):
     wall = extrude([(TABLIER_X, 0.40), (1.745, 0.40), (1.745, 0.80), (1.60, fender_top(1.60) - 0.03), (1.0, fender_top(1.0) - 0.03), (TABLIER_X, fender_top(TABLIER_X) - 0.03)], 0.003, (0, 0, s * 0.556), (0, 0, 1), peinture, 'aile-int', up=(0, 1, 0))
-    cut(wall, cyl(0.36, 0.2, (ARCH_F[0], ARCH_F[1], s * 0.556), (0, 0, 1), None, 64, name='arche'))
+    cut(wall, cyl(ARCH_F[2] + 0.01, 0.2, (ARCH_F[0], ARCH_F[1], s * 0.556), (0, 0, 1), None, 64, name='arche'))
     front_bits.append(wall)
 for s in (1, -1):
-    for (ax, ay, ar), z0, z1, mat in ((ARCH_F, 0.556, 0.742, peinture), (ARCH_R, 0.56, 0.745, peinture)):
+    for (ax, ay, ar), z0, z1, mat in ((ARCH_F, 0.556, 0.712, peinture), (ARCH_R, 0.56, 0.712, peinture)):
         prof = []
         for a in lin(0.12, math.pi - 0.12, 40):
             prof.append((ax + (ar - 0.004) * math.cos(a), ay + (ar - 0.004) * math.sin(a)))
@@ -534,7 +497,7 @@ for s in (1, -1):
     q_seal.append(seal([(x, y, s * (z_glass(y) + 0.001)) for x, y in Q_WIN], 0.006))
 gutters = []
 for s in (1, -1):
-    gutters.append(tube([(x_ws(Y_ROOF) - 0.03, Y_ROOF - 0.002, s * 0.672), (-0.5, Y_ROOF - 0.002, s * 0.673), (x_rear(Y_ROOF) + 0.16, Y_ROOF - 0.002, s * 0.672)], 0.007, peinture, 'gouttiere'))
+    gutters.append(tube([(x_ws(Y_ROOF) - 0.03, Y_ROOF - 0.002, s * (ROOF_HW + 0.006)), (-0.5, Y_ROOF - 0.002, s * (ROOF_HW + 0.007)), (x_rear(Y_ROOF) + 0.16, Y_ROOF - 0.002, s * (ROOF_HW + 0.006))], 0.007, peinture, 'gouttiere'))
 
 
 # ---------------------------------------------------------------- vitres coulissantes, garnitures, poignées
@@ -568,7 +531,7 @@ def door_lock(x1, front, s):
     hx = -0.10 if front else -0.70
     zo = zside(hx, 0.955)
     ze = zside(xe, 0.90)
-    zi = 0.705
+    zi = zside(x1 + 0.10, 0.93) - 0.032
     bits = []
     # poignée intérieure (levier chromé sur platine)
     xi = x1 + 0.10
@@ -616,13 +579,18 @@ for name, ol, s in DOORS:
         half = clip_x(big, xm - 0.012 if keep_front else xm + 0.012, keep_front)
         bits.append(poly_glass([(x, y, s * (z_glass(y) - inset)) for x, y in half], vitre, 'glace'))
     bits.append(seal([(x, y, s * (z_glass(y) + 0.001)) for x, y in win], 0.006))
-    bits.append(box((0.012, 0.36, 0.012), (xm, 1.26, s * (z_glass(1.26) - 0.012)), joint, 0.002, 'rail'))
-    bits.append(box((0.02, 0.012, 0.03), (xm, 1.065, s * (z_glass(1.07) - 0.01)), joint, 0.002, 'coulisse'))
+    ym = (W_BOT + W_TOP) / 2
+    bits.append(tube([(xm, y, s * (z_glass(y) - 0.012)) for y in lin(W_BOT + 0.01, W_TOP - 0.01, 6)], 0.006, joint, 'rail', seg=6))
+    bits.append(box((0.02, 0.012, 0.03), (xm, W_BOT - 0.005, s * (z_glass(W_BOT) - 0.01)), joint, 0.002, 'coulisse'))
     # garniture intérieure, accoudoir, poignée intérieure
     x0, x1 = (0.66, -0.19) if front else (-0.24, -0.79)
-    trim = box((abs(x1 - x0), 0.58, 0.008), ((x0 + x1) / 2, 0.73, s * 0.712), garniture, 0.004, 'garniture')
+    # garniture : panneau qui épouse le galbe intérieur de la porte
+    P = [[(x, y, s * (zside(x, y) - 0.026)) for y in lin(0.44, BELT - 0.03, 14)] for x in lin(x1, x0, 10)]
+    trim = orient(grid(P, garniture, 'garniture'), inside=((x0 + x1) / 2, 0.73, 0.0))
+    solidify(trim, 0.008, 1.0)
     bits.append(trim)
-    bits.append(box((0.22, 0.03, 0.04), ((x0 + x1) / 2 - 0.05, 0.86, s * 0.69), garniture, 0.01, 'accoudoir'))
+    xa = (x0 + x1) / 2 - 0.05
+    bits.append(box((0.22, 0.03, 0.04), (xa, 0.86, s * (zside(xa, 0.86) - 0.052)), garniture, 0.01, 'accoudoir'))
     # serrure (pièce à part) : poignée intérieure à 100 mm du chant arrière, poignée extérieure à
     # palette, barillet sur les portes avant, mécanisme sur le chant arrière, tringles et gâche
     lock_bits[name] = door_lock(x1, front, s)
@@ -660,9 +628,11 @@ for name, _, s in DOORS:
 strips_body = [gtl_strip(0.710, 0.96, s) for s in (1, -1)]
 
 # rétroviseur extérieur côté conducteur (porte avant gauche)
-mirror_bits = [tube([(0.560, 1.080, -0.735), (0.555, 1.10, -0.79)], 0.008, plastique_noir, 'bras-retro'),
-               box((0.035, 0.085, 0.13), (0.565, 1.13, -0.845), plastique_noir, 0.02, 'retro'),
-               box((0.004, 0.07, 0.11), (0.585, 1.13, -0.845), reflecteur, 0.01, 'miroir')]
+ZR = zside(0.56, 0.96)
+mirror_bits = [box((0.05, 0.03, 0.012), (0.560, 0.965, -(ZR + 0.004)), plastique_noir, 0.004, 'embase-retro'),
+               tube([(0.560, 0.975, -(ZR + 0.006)), (0.555, 1.02, -(ZR + 0.05))], 0.008, plastique_noir, 'bras-retro'),
+               box((0.035, 0.085, 0.13), (0.565, 1.05, -(ZR + 0.105)), plastique_noir, 0.02, 'retro'),
+               box((0.004, 0.07, 0.11), (0.585, 1.05, -(ZR + 0.105)), reflecteur, 0.01, 'miroir')]
 door_extra['portes-avg'] += mirror_bits
 
 # ---------------------------------------------------------------- hayon : vitre, poignée, plaque, monogramme
@@ -698,12 +668,12 @@ hatch_bits.append(quad((x_rear(0.655) - 0.0095, 0.655, 0), 0.52, 0.11, (-1, 0, 0
 hatch_bits.append(box((0.03, 0.025, 0.12), (x_rear(0.73) - 0.012, 0.735, 0), plastique_noir, 0.006, 'eclaireur-plaque'))
 hatch_bits.append(box((0.006, 0.022, 0.16), (x_rear(0.97) - 0.004, 0.975, 0.36), chrome, 0.003, 'monogramme'))
 for s in (1, -1):   # charnières en haut du hayon
-    hatch_bits.append(cyl(0.008, 0.07, (x_rear(1.485) - 0.002 + SILL_IN, 1.488, s * 0.40), (0, 0, 1), acier, 14, name='charniere-hayon'))
-    hatch_bits.append(tube([(x_rear(1.40) + SILL_IN + 0.02, 1.40, s * 0.55), (x_rear(1.40) + SILL_IN + 0.12, 1.47, s * 0.60)], 0.007, acier_noir, 'compas'))
+    hatch_bits.append(cyl(0.008, 0.07, (x_rear(1.43) - 0.002 + SILL_IN, 1.433, s * 0.30), (0, 0, 1), acier, 14, name='charniere-hayon'))
+    hatch_bits.append(tube([(x_rear(1.33) + SILL_IN + 0.03, 1.33, s * 0.40), (x_rear(1.33) + SILL_IN + 0.12, 1.40, s * 0.43)], 0.007, acier_noir, 'compas'))
 
 # trappe de carburant (arrière droit)
-filler = [cyl(0.036, 0.012, (-1.585, 0.80, zside(-1.585, 0.80) + 0.004), (0, 0, 1), peinture, 32, name='trappe'),
-          torus(0.036, 0.003, (-1.585, 0.80, zside(-1.585, 0.80) + 0.004), (0, 0, 1), joint, 32, 6, 'joint-trappe')]
+filler = [cyl(0.036, 0.012, (-1.45, 0.86, zside(-1.45, 0.86) + 0.002), (0, 0, 1), peinture, 32, name='trappe'),
+          torus(0.036, 0.003, (-1.45, 0.86, zside(-1.45, 0.86) + 0.002), (0, 0, 1), joint, 32, 6, 'joint-trappe')]
 
 
 # =====================================================================================
@@ -752,7 +722,10 @@ for sign in (1, -1):
     yc = 0.400 if sign > 0 else 0.425
     bits = [bumper(sign)]
     for s in (1, -1):
-        bits.append(box((0.03, 0.115, 0.06), (xb + sign * 0.018, yc, s * 0.29), caoutchouc, 0.012, 'butoir'))
+        # butoirs verticaux qui dépassent dessus et dessous la lame (vues de face MR 175 A-2, RTA p. 3)
+        bits.append(box((0.036, 0.200, 0.064), (xb + sign * 0.020, yc + 0.015, s * 0.29), caoutchouc, 0.014, 'butoir'))
+        for k in range(7):
+            bits.append(box((0.006, 0.008, 0.066), (xb + sign * 0.039, yc - 0.055 + k * 0.023, s * 0.29), caoutchouc, 0.002, 'strie'))
         bits.append(box((0.10, 0.03, 0.04), (xb - sign * 0.09, yc - 0.04, s * 0.29), acier_noir, 0.004, 'patte-pare-chocs'))
     if sign > 0:
         bits.append(box((0.006, 0.112, 0.522), (xb + 0.025, 0.40, 0), support, 0.002, 'support-av'))
@@ -801,19 +774,17 @@ for s in (1, -1):
     # répétiteurs latéraux sur les ailes
     rx = 1.14
     feux_bits.append(box((0.05, 0.02, 0.010), (rx, 0.80, s * (zside(rx, 0.80) + 0.004)), cabochon_orange, 0.004, 'repetiteur'))
-    # feux arrière verticaux sur les angles (position/stop rouge, clignotant orange en haut)
-    for y0, y1, mat in ((0.675, 0.835, cabochon_rouge), (0.835, 0.905, cabochon_orange)):
-        prof = []
-        for a in lin(0, math.pi / 2, 9):
-            cx, cz = x_rear(0.80) + RC_REAR, zside(x_rear(0.80) + RC_REAR, 0.80) - RC_REAR
-            prof.append((cx - (RC_REAR + 0.012) * math.cos(a) * 1.0, cz + (RC_REAR + 0.012) * math.sin(a)))
-        pts = [(prof[k][0], (y0 + y1) / 2, s * prof[k][1]) for k in range(len(prof))]
-        sec = [(0, y0 - (y0 + y1) / 2), (0, y1 - (y0 + y1) / 2)]
-        P = [[(x, (y0 + y1) / 2 + dy, z) for _, dy in sec] for x, _, z in pts]
-        lamp = grid(P, mat, 'feu-ar')
-        solidify(lamp, 0.012, 0.0)
+    # feux arrière verticaux sur la face arrière, en dedans des angles (vue arrière MR 175 A-2) :
+    # position/stop rouge en bas, clignotant orange en haut, boîtier noir autour
+    ZL, WL = 0.565, 0.042
+    feux_bits.append(grid([[(x_rear(y) - 0.002, y, s * (ZL + dz)) for dz in lin(-WL - 0.008, WL + 0.008, 5)] for y in lin(0.625, 0.895, 14)], plastique_noir, 'boitier-feu-ar'))
+    solidify(feux_bits[-1], 0.004, 0.0)
+    for y0, y1, mat in ((0.635, 0.800, cabochon_rouge), (0.803, 0.885, cabochon_orange)):
+        P = [[(x_rear(y) - 0.006 - 0.008 * (1 - (dz / WL) ** 2), y, s * (ZL + dz)) for dz in lin(-WL, WL, 9)] for y in lin(y0, y1, 12)]
+        lamp = orient(grid(P, mat, 'feu-ar'), inside=(x_rear(0.75) + 0.3, 0.75, s * ZL))
+        solidify(lamp, 0.010, 1.0)
         feux_bits.append(lamp)
-    feux_fx['vis-feux-ar'] += [((x_rear(0.88) - 0.014, 0.88, s * 0.668), (-1, 0, 0)), ((x_rear(0.70) - 0.014, 0.70, s * 0.668), (-1, 0, 0))]
+    feux_fx['vis-feux-ar'] += [((x_rear(0.86) - 0.016, 0.86, s * ZL), (-1, 0, 0)), ((x_rear(0.66) - 0.016, 0.66, s * ZL), (-1, 0, 0))]
 
 # =====================================================================================
 # Essuie-glace : moteur derrière la planche de bord ; d'après la photo RTA p. XVIII, axes à
@@ -828,21 +799,21 @@ def on_ws(z, y):
 
 
 for zp in WIPER_Z:
-    p0 = (0.655, 1.046, zp)
+    p0 = (0.655, Y_AUV + 0.012, zp)
     wiper_bits.append(cyl(0.012, 0.03, p0, (0, 1, 0), plastique_noir, 16, name='axe-essuie'))
-    wiper_bits.append(cyl(0.016, 0.012, (0.652, 1.040, zp), (0, 1, 0), plastique_noir, 16, name='ecrou-axe'))
+    wiper_bits.append(cyl(0.016, 0.012, (0.652, Y_AUV + 0.006, zp), (0, 1, 0), plastique_noir, 16, name='ecrou-axe'))
     a = math.radians(15)
     L = 0.36
-    pts = [on_ws(zp + t * L * math.cos(a), 1.060 + t * L * math.sin(a)) for t in (0.0, 0.5, 1.0)]
+    pts = [on_ws(zp + t * L * math.cos(a), 1.032 + t * L * math.sin(a)) for t in (0.0, 0.5, 1.0)]
     wiper_bits.append(tube([p0, pts[0], pts[1], pts[2]], 0.0055, plastique_noir, 'bras'))
     # balai : 0,30 m centré sur le bout du bras, posé sur la glace
-    c = (zp + L * math.cos(a), 1.060 + L * math.sin(a))
+    c = (zp + L * math.cos(a), 1.032 + L * math.sin(a))
     ends = [on_ws(c[0] + d * 0.15 * math.cos(a), c[1] + d * 0.15 * math.sin(a)) for d in (-1, 1)]
     wiper_bits.append(tube([(e[0] - 0.004, e[1], e[2]) for e in ends], 0.0035, caoutchouc, 'balai'))
     wiper_bits.append(tube(ends, 0.004, plastique_noir, 'monture'))
-wiper_bits.append(box((0.08, 0.06, 0.10), (0.60, 0.97, 0.20), acier_noir, 0.01, 'moteur-essuie'))
-wiper_bits.append(tube([(0.60, 0.99, 0.20), (0.63, 1.02, 0.23), (0.655, 1.035, 0.25)], 0.004, acier, 'biellette'))
-wiper_bits.append(tube([(0.60, 0.99, 0.18), (0.64, 1.025, 0.02), (0.655, 1.035, -0.13)], 0.004, acier, 'biellette'))
+wiper_bits.append(box((0.08, 0.06, 0.10), (0.60, 0.95, 0.20), acier_noir, 0.01, 'moteur-essuie'))
+wiper_bits.append(tube([(0.60, 0.97, 0.20), (0.63, 0.99, 0.23), (0.655, Y_AUV - 0.002, 0.25)], 0.004, acier, 'biellette'))
+wiper_bits.append(tube([(0.60, 0.97, 0.18), (0.64, 0.99, 0.02), (0.655, Y_AUV - 0.002, -0.13)], 0.004, acier, 'biellette'))
 
 # =====================================================================================
 # Pièces du site

@@ -33,7 +33,7 @@ export const PARTS = {
   caisse: {
     name: 'Caisse', system: 'carrosserie',
     desc: 'Carrosserie boulonnée sur le cadre plancher (plateforme). Berline 5 portes, 4 places (type R 1128).',
-    specs: [['Longueur', '3 668 mm'], ['Largeur', '1 509 mm'], ['Hauteur à vide', '1 550 mm'], ['Poids à vide', '720 kg'], ['Référence peinture', 'côté d’auvent droit']],
+    specs: [['Longueur', '3 668 mm'], ['Largeur hors tout', '1 485 mm (MR 175 A-2 ; la RTA donne 1 509 mm)'], ['Empattement', '2 449 mm à droite, 2 401 mm à gauche'], ['Hauteur à vide', '1 550 mm'], ['Poids à vide', '720 kg'], ['Référence peinture', 'côté d’auvent droit']],
     pages: [79, 19],
   },
   plateforme: {
@@ -212,7 +212,7 @@ export const PARTS = {
   jauge: { name: 'Jauge à huile', system: 'moteur', desc: 'Contrôle sur sol plat, moteur arrêté depuis 10 minutes. Ne jamais descendre sous « Mini ». Si l’appoint dépasse 1 L aux 1 000 km, il faut chercher la cause.', specs: [['Maxi', '3 L'], ['Mini', '1,5 L']], pages: [5, 22] },
   bougies: {
     name: 'Bougies', system: 'alimentation',
-    desc: 'Quatre bougies d’allumage. Ordre d’allumage 1-3-4-2, cylindre n° 1 côté volant.',
+    desc: 'Quatre bougies d’allumage, côté droit (côté arbre à cames et tiges de culbuteurs, à l’opposé des collecteurs), l’allumeur entre les bougies 2 et 3 (MR 175 B-21 et B-50). Ordre d’allumage 1-3-4-2, cylindre n° 1 côté volant.',
     specs: [['Modèles (688 D7 12)', 'AC 43 F, Champion L 92 Y'], ['Écartement des électrodes', '0,55 à 0,65 mm']],
     pages: [23, 25],
   },
@@ -1613,7 +1613,7 @@ export const FASTENERS = {
   'vis-tendeur-chaine': { name: 'Vis du tendeur de chaîne', part: 'chaine-distribution', count: 2, pages: [36] },
   'vis-carter-distribution': { name: 'Vis du carter de distribution', part: 'distribution', note: 'Joint liège neuf au remontage.', pages: [36] },
   'vis-carter-huile': { name: 'Vis du carter inférieur', part: 'carter-huile', note: 'Joints caoutchouc des paliers et joints latéraux neufs.', pages: [33, 36] },
-  'vis-pompe-huile': { name: 'Vis de pompe à huile', part: 'pompe-huile', pages: [37] },
+  'vis-pompe-huile': { name: 'Vis de pompe à huile', part: 'pompe-huile', count: 3, note: 'Trois vis sous le carter-cylindres (MR 175 B-84). Pompe montée sans joint.', pages: [37] },
   thermocontact: { name: 'Thermocontact de culasse', part: 'culasse', count: 1, pages: [38] },
   'bouchon-vidange': { name: 'Bouchon de vidange du carter', part: 'carter-huile', count: 1, note: 'Clé carrée Mot. 593. Joint neuf conseillé.', pages: [5] },
   'filtre-huile-cartouche': { name: 'Cartouche filtre à huile', part: 'filtre-huile', count: 1, torque: 'contact du joint + 1/4 de tour à la main', pages: [37] },
@@ -1632,7 +1632,7 @@ export const FASTENERS = {
   'ecrous-radiateur': { name: 'Écrous de fixation du radiateur', part: 'radiateur', count: 2, pages: [37] },
   'bouchon-vidange-radiateur': { name: 'Vidange du radiateur', part: 'radiateur', count: 1, note: 'Ou débrancher la durit inférieure.', pages: [37] },
   'vis-pompe-eau': { name: 'Vis de pompe à eau', part: 'pompe-eau', note: 'Décoller la pompe à la massette plastique. Joints montés à sec.', pages: [37] },
-  'vis-poulie-pompe': { name: 'Vis de poulie de pompe à eau', part: 'pompe-eau' },
+  'vis-poulie-pompe': { name: 'Écrou de poulie de pompe à eau', part: 'pompe-eau', count: 1, torque: '4,5 m.daN', note: 'Poulie montée sans clavette : arbre et cône dégraissés, 2 gouttes de Loctite frein filet fort (MR 175 B-86).' },
   'vis-purge-refroidissement': { name: 'Vis de purge du circuit de refroidissement', part: 'durites', note: 'Fermer dès qu’un jet continu sans air sort, puis ne plus y toucher.', pages: [38] },
   'bouchons-boite': { name: 'Bouchons de vidange (V) et de niveau (R) de boîte', part: 'boite', count: 2, note: 'Clé B.Vi. 380-01. Niveau : l’huile affleure au bas de l’orifice R.', pages: [6, 7] },
   'vis-couvercle-sup-boite': { name: 'Vis du couvercle supérieur de boîte', part: 'couvercle-boite', torque: '1 m.daN (Ø 7)', pages: [41, 42] },

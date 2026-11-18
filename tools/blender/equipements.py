@@ -28,8 +28,8 @@ EX = 0.92
 XF = EX + 0.185
 TABLIER_X = 0.700
 PUL_X = XF + 0.07                    # plan des poulies (côté embrayage)
-CAM = (0.488, 0.074, 0.050)          # poulie d'arbre à cames (y, z, r) — voir moteur.py
-WP = (0.626, 0.020, 0.060)           # poulie de pompe à eau
+CAM = (0.516, 0.077, 0.050)          # poulie d'arbre à cames (y, z, r) — voir moteur.py
+WP = (0.6255, 0.020, 0.060)           # poulie de pompe à eau
 ALT = (0.665, 0.225, 0.036)          # poulie d'alternateur
 
 alu = M('alu-coule', 0xb9bcba, 0.55, 0.5)
@@ -166,19 +166,19 @@ for s in (1, -1):
     th.add(tube([(TX + s * 0.016, TY + 0.010, TZ), (TX + s * 0.012, TY - 0.012, TZ), (TX, TY - 0.016, TZ)], 0.0015, laiton, 'etrier', seg=6))
 pts = [(TX + 0.011 * math.cos(2 * math.pi * 3.5 * i / 30), TY + 0.004 - 0.014 * i / 30, TZ + 0.011 * math.sin(2 * math.pi * 3.5 * i / 30)) for i in range(31)]
 th.add(tube(pts, 0.0011, M('ressort', 0x6d7d8a, 0.8, 0.35), 'ressort', seg=4, res=2))
-fasteners(th, 'vis-boitier-thermostat', [((TX + s * 0.024, TY + 0.03, TZ), (0, 1, 0)) for s in (1, -1)], kind='bolt', r=0.004, length=0.025, travel=0.04)
+fasteners(th, 'vis-boitier-thermostat', [((TX, TY + 0.006, TZ + s * 0.028), (0, 1, 0)) for s in (1, -1)], kind='bolt', r=0.004, length=0.02, travel=0.04)   # pattes du siège (moteur.py)
 
 dur = Part('durites', (0.15, 0.3, 0))
-up = [(1.175, 0.690, -0.02), (1.30, 0.75, -0.10), (1.50, 0.76, -0.20), (RX - 0.065, RY + 0.10, ZL - 0.018)]
-lo = [(RX - 0.065, RY - 0.10, ZR + 0.018), (1.50, 0.53, 0.20), (1.25, 0.58, 0.14), (1.16, 0.58, 0.07)]
+up = [(1.16, 0.696, -0.02), (1.19, 0.725, -0.04), (1.30, 0.765, -0.10), (1.50, 0.76, -0.20), (RX - 0.065, RY + 0.10, ZL - 0.018)]
+lo = [(RX - 0.065, RY - 0.10, ZR + 0.018), (1.50, 0.53, 0.20), (1.25, 0.59, 0.155), (1.19, 0.588, 0.14), (1.14, 0.588, 0.095)]
 dur.add(tube(up, 0.019, caoutchouc, 'durite-superieure', seg=14, res=10))     # thermostat → radiateur
 dur.add(tube(lo, 0.019, caoutchouc, 'durite-inferieure', seg=14, res=10))     # radiateur → pompe
 dur.add(tube([(0.76, 0.64, -0.06), (0.73, 0.72, -0.20), (TABLIER_X + 0.005, 0.79, -0.30)], 0.010, caoutchouc, 'durite-chauffage-aller', seg=10))
-dur.add(tube([(1.12, 0.58, 0.07), (0.95, 0.64, 0.25), (0.76, 0.74, 0.30), (TABLIER_X + 0.005, 0.79, 0.28)], 0.010, caoutchouc, 'durite-chauffage-retour', seg=10, res=10))
+dur.add(tube([(1.12, 0.58, 0.07), (1.08, 0.55, 0.14), (1.0, 0.555, 0.21), (0.95, 0.62, 0.21), (0.76, 0.74, 0.30), (TABLIER_X + 0.005, 0.79, 0.28)], 0.010, caoutchouc, 'durite-chauffage-retour', seg=10, res=10))
 dur.add(tube([(VX + 0.06, VY - 0.07, VZ), (1.20, 0.72, 0.35), (1.55, 0.82, 0.10), (RX - 0.03, RY + CH / 2 + 0.008, ZL - 0.018)], 0.005, caoutchouc, 'tuyau-vase', seg=8, res=10))
 cl = []
-for p, ax in ((up[0], (1, 0.4, 0)), (up[-1], (1, 0, 0)), (lo[0], (1, 0, 0)), (lo[-1], (1, 0, 0)),
-              ((0.76, 0.645, -0.065), (0.3, 1, -0.6)), ((TABLIER_X + 0.012, 0.79, -0.30), (1, 0, 0)), ((TABLIER_X + 0.012, 0.79, 0.28), (1, 0, 0)), ((1.115, 0.582, 0.075), (1, 0, 0))):
+for p, ax in ((up[0], (1, 0, 0)), (up[-1], (1, 0, 0)), (lo[0], (1, 0, 0)), (lo[-1], (1, 0, 0)),
+              ((0.76, 0.645, -0.065), (0.3, 1, -0.6)), ((TABLIER_X + 0.012, 0.79, -0.30), (1, 0, 0)), ((TABLIER_X + 0.012, 0.79, 0.28), (1, 0, 0)), ((1.14, 0.588, 0.105), (0, 0, 1))):
     r = 0.019 if p in (up[0], up[-1], lo[0], lo[-1]) else 0.010
     dur.add(torus(r + 0.002, 0.0022, p, ax, zinc, 24, 6, 'collier'))
     cl.append(((p[0], p[1] + r + 0.004, p[2]), (0, 1, 0)))
@@ -215,7 +215,7 @@ alt.add(lathe([(0.008, -0.009), (ALT[2], -0.009), (ALT[2], -0.006), (ALT[2] - 0.
 alt.add(box((0.04, 0.03, 0.05), (PUL_X - 0.17, AY_ + 0.02, AZ_ + 0.03), noir, 0.006, 'regulateur'))
 alt.add(box((0.05, 0.03, 0.04), (PUL_X - 0.11, AY_ - 0.075, AZ_ - 0.03), acier_noir, 0.006, 'patte-pivot'))
 alt.add(tube([(PUL_X - 0.10, AY_ + 0.06, AZ_ - 0.03), (PUL_X - 0.10, AY_ + 0.09, AZ_ - 0.12), (PUL_X - 0.10, 0.68, 0.06)], 0.006, acier_noir, seg=8))   # tendeur à coulisse
-alt.add(tube([(PUL_X - 0.17, AY_ + 0.03, AZ_ + 0.05), (0.95, 0.62, 0.30), (0.80, 0.80, 0.30)], 0.004, fil, seg=6))
+alt.add(tube([(PUL_X - 0.17, AY_ + 0.03, AZ_ + 0.05), (0.95, 0.62, 0.28), (0.80, 0.755, 0.28)], 0.004, fil, seg=6))
 
 
 def belt_loop(pulleys, n=24):
@@ -361,7 +361,7 @@ bob = Part('bobine', (0, 0.3, 0.3))
 bob.add(lathe([(0.0, -0.07), (0.03, -0.07), (0.03, 0.06), (0.02, 0.075), (0.0, 0.078)], (TABLIER_X + 0.05, 0.80, 0.20), (0, 1, 0), bleu, 28, 'bobine'))
 bob.add(box((0.02, 0.10, 0.07), (TABLIER_X + 0.012, 0.80, 0.20), acier_noir, 0.004, 'collier'))
 bob.add(cyl(0.006, 0.025, (TABLIER_X + 0.05, 0.89, 0.20), (0, 1, 0), noir, 12, name='sortie-ht'))
-bob.add(tube([(TABLIER_X + 0.05, 0.90, 0.20), (0.80, 0.86, 0.15), (0.84, 0.80, 0.11)], 0.004, noir, seg=6))   # fil HT vers l'allumeur
+bob.add(tube([(TABLIER_X + 0.05, 0.90, 0.20), (0.84, 0.88, 0.16), (0.91, 0.82, 0.12), (0.92, 0.79, 0.109)], 0.004, noir, seg=6))   # fil HT vers l'allumeur (entre bougies 2 et 3, moteur.py)
 
 # =====================================================================================
 # PLAQUES D'IDENTIFICATION (RTA p.5 / PDF p.19 et photo) : plaque constructeur rivée sur le
@@ -408,7 +408,7 @@ lg.add(box((0.12, 0.13, 0.085), (1.26, 0.77, 0.475), plastique, 0.02, 'reservoir
 lg.add(box((0.115, 0.08, 0.08), (1.26, 0.745, 0.475), lave, 0.018, 'liquide'))
 lg.add(cyl(0.02, 0.025, (1.24, 0.845, 0.475), (0, 1, 0), M('bleu', 0x2c64a3, 0.1, 0.4), 16, name='bouchon'))
 lg.add(cyl(0.018, 0.035, (1.29, 0.71, 0.475), (0, 1, 0), noir, 14, name='pompe'))
-lg.add(tube([(1.29, 0.69, 0.47), (1.10, 0.86, 0.40), (0.80, 0.98, 0.25), (0.665, 1.045, 0.10)], 0.0025, M('tuyau-lave', 0xdbd8cc, 0.0, 0.5), seg=6, res=10))
+lg.add(tube([(1.29, 0.69, 0.47), (1.10, 0.86, 0.40), (0.80, 0.97, 0.25), (0.665, 1.018, 0.10)], 0.0025, M('tuyau-lave', 0xdbd8cc, 0.0, 0.5), seg=6, res=10))
 
 # =====================================================================================
 # FREINAGE HYDRAULIQUE
@@ -425,7 +425,7 @@ for dz in (0.02, -0.02):
     mc.add(cyl(0.006, 0.02, (TABLIER_X + 0.12, MY - 0.03, MZ + dz), (0, 1, 0), laiton, 10, name='raccord'))
 # canalisations : circuit AV gauche, AV droit, et vers le limiteur arrière
 for s in (1, -1):
-    mc.add(tube([(TABLIER_X + 0.12, MY - 0.04, MZ + 0.02), (0.90, 0.70, s * 0.40 if s < 0 else -0.10), (1.10, 0.55, s * 0.38), (AXLE_F - 0.20, 0.50, s * 0.40)], 0.0028, cuivre, seg=6, res=12))
+    mc.add(tube([(TABLIER_X + 0.12, MY - 0.04, MZ + 0.02), *([(0.90, 0.70, s * 0.40)] if s < 0 else [(0.80, 0.80, 0.37), (0.95, 0.64, 0.42)]), (1.10, 0.55, s * 0.38), (AXLE_F - 0.20, 0.50, s * 0.40)], 0.0028, cuivre, seg=6, res=12))
 mc.add(tube([(TABLIER_X + 0.12, MY - 0.04, MZ - 0.02), (TABLIER_X + 0.05, 0.55, -0.52), (0.60, 0.36, -0.55), (0.0, 0.345, -0.55), (-0.60, 0.33, -0.20), (-0.80, 0.30, 0.15)], 0.0028, cuivre, seg=6, res=14))
 fasteners(mc, 'vis-maitre-cylindre', [((TABLIER_X + 0.018, MY + 0.035, MZ + 0.035), (1, 0, 0)), ((TABLIER_X + 0.018, MY - 0.035, MZ - 0.035), (1, 0, 0))], kind='nut', r=0.007, length=0.03, travel=0.04)
 

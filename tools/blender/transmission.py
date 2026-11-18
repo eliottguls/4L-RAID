@@ -184,7 +184,7 @@ LEV = (XBU + 0.024, YP - 0.135, 0.085)   # extrémité du levier de fourchette
 STOP = (XF + 0.012, YP - 0.135, 0.085)   # butée de gaine sur le carter d'embrayage
 cab.add(tube([LEV, STOP], 0.0018, acier, seg=6))                            # câble nu et embout fileté
 cab.add(box((0.012, 0.03, 0.03), STOP, acier_noir, bev=0.003))               # patte d'arrêt de gaine
-cab.add(tube([STOP, (XF - 0.04, YP - 0.12, 0.13), (0.98, 0.42, 0.24), (0.95, 0.66, 0.28), (0.90, 0.80, 0.18), (0.86, 0.80, 0.0), (0.84, 0.70, -0.40)], 0.0042, noir, seg=8, res=14))
+cab.add(tube([STOP, (XF - 0.04, YP - 0.12, 0.17), (0.98, 0.42, 0.26), (0.95, 0.66, 0.28), (0.865, 0.80, 0.18), (0.845, 0.80, 0.0), (0.84, 0.70, -0.40)], 0.0042, noir, seg=8, res=14))
 fasteners(cab, 'reglage-embrayage', [((LEV[0] - 0.008, LEV[1], LEV[2]), (-1, 0, 0)), ((LEV[0] - 0.016, LEV[1], LEV[2]), (-1, 0, 0))], kind='nut', r=0.006, length=0.012, travel=0.025)
 
 # =====================================================================================
@@ -193,8 +193,10 @@ fasteners(cab, 'reglage-embrayage', [((LEV[0] - 0.008, LEV[1], LEV[2]), (-1, 0, 
 ce = Part('carter-embrayage', (0.3, 0.32, 0))
 bell = lathe([(0.135, 0.0), (0.175, 0.0), (0.178, 0.008), (0.17, 0.05), (0.15, 0.10), (0.13, 0.12), (0.125, 0.12), (0.145, 0.10), (0.162, 0.05), (0.168, 0.008), (0.135, 0.008)],
              (XF + 0.006, YP + 0.035, 0), (1, 0, 0), alu, 56)
-# fenêtre du démarreur (côté GAUCHE, sous le collecteur : RTA p.73) et lumière du levier de fourchette
-for c in (cyl(0.038, 0.07, (XF + 0.04, 0.412, -0.141), (1, 0, 0), None, 28), box((0.05, 0.06, 0.08), (XBU + 0.024, YP - 0.11, 0.1), None)):
+# fenêtre du démarreur (côté GAUCHE, sous le collecteur : RTA p.73), lumière du levier de fourchette et
+# dégagement de la poulie d'arbre à cames (arbre à cames à 116 mm au-dessus du vilebrequin, MR 175 B-21)
+for c in (cyl(0.038, 0.07, (XF + 0.04, 0.412, -0.141), (1, 0, 0), None, 28), box((0.05, 0.06, 0.08), (XBU + 0.024, YP - 0.11, 0.1), None),
+          cyl(0.058, 0.04, (XF + 0.07, 0.516, 0.077), (1, 0, 0), None, 32)):
     boolean(bell, c)
     apply_all(bell)
     delete(c)
